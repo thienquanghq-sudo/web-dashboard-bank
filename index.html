@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>So sánh ngành ngân hàng</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF0F3; --panel:#FFFFFF; --ink:#16181D; --muted:#6B7280;
+    --line:#E0E3E9; --line-strong:#C9CDD6; --radius:10px; --accent:#1D4ED8;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'IBM Plex Sans',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{font-family:var(--sans);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;}
+  button{font-family:var(--sans);cursor:pointer;}
+
+  header{padding:18px 24px 14px;border-bottom:1px solid var(--line);background:var(--panel);display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 5px;}
+  header h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em;}
+  .cover{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px;}
+  .hbtn{font-family:var(--mono);font-size:12px;border:1px solid var(--line-strong);background:#fff;color:var(--ink);padding:8px 12px;border-radius:8px;}
+  .hbtn:hover{border-color:var(--ink);}
+
+  .wrap{padding:16px 24px 40px;max-width:1320px;margin:0 auto;}
+
+  /* control bar */
+  .bar{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;}
+  .row{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:flex-end;}
+  .ctrl{display:flex;flex-direction:column;gap:6px;}
+  .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+
+  /* segmented */
+  .seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;background:#fff;}
+  .seg button{border:0;background:#fff;padding:8px 13px;font-size:13px;color:var(--muted);border-right:1px solid var(--line);}
+  .seg button:last-child{border-right:0;}
+  .seg button.on{background:var(--ink);color:#fff;font-weight:500;}
+  .seg.sm button{padding:7px 11px;font-size:12px;font-family:var(--mono);}
+
+  /* dropdown picker */
+  .pick{position:relative;}
+  .pick>.trig{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-strong);background:#fff;border-radius:8px;padding:8px 12px;font-size:13px;min-width:190px;justify-content:space-between;}
+  .pick>.trig:hover{border-color:var(--ink);}
+  .trig .cnt{font-family:var(--mono);font-size:11px;color:#fff;background:var(--accent);border-radius:20px;padding:1px 7px;}
+  .panel{position:absolute;z-index:40;top:calc(100% + 6px);left:0;width:360px;max-width:86vw;background:#fff;border:1px solid var(--line-strong);border-radius:10px;box-shadow:0 12px 32px rgba(20,24,29,.16);display:none;overflow:hidden;}
+  .panel.open{display:block;}
+  .panel .srch{padding:10px;border-bottom:1px solid var(--line);}
+  .panel .srch input{width:100%;border:1px solid var(--line-strong);border-radius:7px;padding:8px 10px;font-family:var(--sans);font-size:13px;}
+  .panel .srch input:focus{outline:none;border-color:var(--accent);}
+  .panel .list{max-height:360px;overflow-y:auto;}
+  .panel .ptools{display:flex;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;}
+  .panel .ptools a{color:var(--accent);cursor:pointer;text-decoration:none;}
+  .sec-h{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:#F6F7F9;padding:7px 12px;position:sticky;top:0;cursor:pointer;display:flex;justify-content:space-between;border-top:1px solid var(--line);}
+  .opt{display:flex;align-items:center;gap:9px;padding:6px 12px;font-size:13px;cursor:pointer;}
+  .opt:hover{background:#F6F7F9;}
+  .opt.hd{color:var(--muted);font-size:12px;cursor:default;}
+  .opt.hd:hover{background:#fff;}
+  .opt input{accent-color:var(--accent);width:15px;height:15px;flex:0 0 auto;}
+  .opt .nm{line-height:1.25;}
+  .opt .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto;}
+  .opt .u{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;flex:0 0 auto;}
+
+  /* chips */
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
+  .chip{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line-strong);border-radius:20px;padding:4px 6px 4px 10px;font-size:12px;font-family:var(--mono);}
+  .chip .dot{width:9px;height:9px;border-radius:3px;}
+  .chip .x{border:0;background:none;color:var(--muted);font-size:15px;line-height:1;padding:0 2px;cursor:pointer;}
+  .chip .x:hover{color:var(--ink);}
+
+  /* range */
+  .rng{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;}
+  .rng select{font-family:var(--mono);font-size:12px;border:1px solid var(--line-strong);border-radius:7px;padding:7px 8px;background:#fff;}
+
+  /* chart card */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 18px 8px;}
+  .ctit{font-size:17px;font-weight:600;margin:0;}
+  .csub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;}
+  #chart{width:100%;height:480px;margin-top:6px;}
+  .foot{font-size:12px;color:var(--muted);border-top:1px solid var(--line);margin-top:6px;padding-top:10px;line-height:1.5;}
+
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+  .st{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 12px;min-width:150px;flex:1 1 150px;}
+  .st .h{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--muted);}
+  .st .v{font-family:var(--mono);font-size:18px;font-weight:600;margin-top:5px;}
+  .st .d{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;}
+
+  .hide{display:none!important;}
+  .loading{padding:60px;text-align:center;color:var(--muted);font-family:var(--mono);}
+  @media(max-width:640px){ .wrap{padding:12px;} #chart{height:380px;} header h1{font-size:19px;} }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <p class="eyebrow">FiinPro · Phân tích ngành</p>
+    <h1>So sánh ngành ngân hàng Việt Nam</h1>
+    <div class="cover" id="cover">Đang tải dữ liệu…</div>
+  </div>
+  <button class="hbtn" id="exportBtn">↓ Xuất ảnh PNG</button>
+</header>
+
+<div class="wrap">
+  <div id="boot" class="loading">Đang tải <b>bank_data.json</b>…<br><span style="font-size:11px">Nếu mở trực tiếp bằng file:// trình duyệt sẽ chặn — hãy chạy qua GitHub Pages hoặc một local server.</span></div>
+
+  <div id="app" class="hide">
+    <!-- CONTROL BAR -->
+    <div class="bar">
+      <div class="row">
+        <div class="ctrl">
+          <span class="lbl">Chế độ</span>
+          <div class="seg" id="modeSeg">
+            <button data-mode="compare" class="on">So sánh</button>
+            <button data-mode="break">Phân rã cấu phần</button>
+          </div>
+        </div>
+
+        <!-- compare controls -->
+        <div class="ctrl mode-compare">
+          <span class="lbl">Ngân hàng</span>
+          <div class="pick" id="bankPick">
+            <button class="trig">Chọn ngân hàng <span class="cnt" id="bankCnt">0</span></button>
+            <div class="panel" id="bankPanel"></div>
+          </div>
+        </div>
+        <div class="ctrl mode-compare">
+          <span class="lbl">Chỉ tiêu</span>
+          <div class="pick" id="metPick">
+            <button class="trig">Chọn chỉ tiêu <span class="cnt" id="metCnt">0</span></button>
+            <div class="panel" id="metPanel"></div>
+          </div>
+        </div>
+
+        <!-- breakdown controls -->
+        <div class="ctrl mode-break hide">
+          <span class="lbl">Ngân hàng</span>
+          <select id="bkBank" class="rng"></select>
+        </div>
+        <div class="ctrl mode-break hide">
+          <span class="lbl">Nhóm phân rã</span>
+          <select id="bkGroup" class="rng" style="min-width:280px"></select>
+        </div>
+        <div class="ctrl mode-break hide">
+          <span class="lbl">Hiển thị</span>
+          <div class="seg sm" id="bkView">
+            <button data-v="abs" class="on">Giá trị</button>
+            <button data-v="share">Tỷ trọng %</button>
+          </div>
+        </div>
+
+        <div class="ctrl">
+          <span class="lbl">Loại biểu đồ</span>
+          <div class="seg sm" id="typeSeg">
+            <button data-t="group" class="on">Cột nhóm</button>
+            <button data-t="stack">Cột chồng</button>
+            <button data-t="line">Đường</button>
+            <button data-t="area">Vùng</button>
+            <button data-t="combo">Kết hợp</button>
+          </div>
+        </div>
+
+        <div class="ctrl mode-compare">
+          <span class="lbl">Trục hoành</span>
+          <div class="seg sm" id="xSeg">
+            <button data-x="time" class="on">Thời gian</button>
+            <button data-x="bank">Ngân hàng</button>
+          </div>
+        </div>
+
+        <div class="ctrl">
+          <span class="lbl">Kỳ</span>
+          <div class="seg sm" id="granSeg">
+            <button data-g="y" class="on">Năm</button>
+            <button data-g="q">Quý</button>
+          </div>
+        </div>
+
+        <div class="ctrl">
+          <span class="lbl" id="rngLbl">Khoảng thời gian</span>
+          <div class="rng">
+            <select id="rngFrom"></select><span>→</span><select id="rngTo"></select>
+          </div>
+        </div>
+
+        <div class="ctrl mode-compare" id="atWrap">
+          <span class="lbl">Kỳ hiển thị</span>
+          <div class="rng"><select id="atSel"></select></div>
+        </div>
+      </div>
+
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <!-- CHART -->
+    <div class="card">
+      <h2 class="ctit" id="ctit">—</h2>
+      <div class="csub" id="csub"></div>
+      <div id="chart"></div>
+      <div class="foot" id="foot"></div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+  </div>
+</div>
+
+<script>
+const PALETTE = ['#1D4ED8','#DC2626','#059669','#D97706','#7C3AED','#0891B2','#DB2777','#65A30D',
+                 '#475569','#EA580C','#0D9488','#9333EA','#CA8A04','#E11D48','#2563EB','#16A34A',
+                 '#B45309','#4F46E5','#BE123C','#0E7490','#A21CAF','#15803D','#92400E','#1E40AF','#9F1239','#155E75'];
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+let DB, M_BY_ID={}, BANK_COLOR={}, chart;
+
+const state={
+  mode:'compare',
+  banks:[], metrics:[],
+  type:'group', xaxis:'time', gran:'y',
+  from:0, to:0, at:0,
+  bkBank:null, bkGroup:null, bkView:'abs'
+};
+
+/* ---------- formatting ---------- */
+function fmtBn(v){
+  if(v==null||isNaN(v)) return '–';
+  const a=Math.abs(v);
+  if(a>=1e6) return (v/1e6).toLocaleString('vi-VN',{maximumFractionDigits:2})+' tr tỷ';
+  if(a>=1e3) return (v/1e3).toLocaleString('vi-VN',{maximumFractionDigits:1})+' ng tỷ';
+  return v.toLocaleString('vi-VN',{maximumFractionDigits:1})+' tỷ';
+}
+function fmtAxisBn(v){
+  const a=Math.abs(v);
+  if(a>=1e6) return (v/1e6).toLocaleString('vi-VN',{maximumFractionDigits:1})+'M';
+  if(a>=1e3) return (v/1e3).toLocaleString('vi-VN',{maximumFractionDigits:0})+'K';
+  return v.toLocaleString('vi-VN',{maximumFractionDigits:0});
+}
+function fmtPct(v){ return v==null||isNaN(v)?'–':v.toLocaleString('vi-VN',{maximumFractionDigits:2})+'%'; }
+function fmtVal(unit,v){ return unit==='pct'?fmtPct(v):(unit==='x'?(v==null?'–':v.toFixed(2)+'x'):fmtBn(v)); }
+
+/* ---------- data access ---------- */
+function periodsAll(){ return state.gran==='y'?DB.periods.years:DB.periods.quarters; }
+function rangeList(){ return periodsAll().slice(state.from, state.to+1); }
+function getVal(bank, mid){ const d=DB.data[bank]&&DB.data[bank][mid]; if(!d)return null; const g=d[state.gran]; return g?g:null; }
+function val(bank, mid, period){ const g=getVal(bank,mid); const v=g?g[period]:null; return v==null?0:v; }
+function hasAny(mid){ for(const b in DB.data){ const d=DB.data[b][mid]; if(d&&(d.y||d.q))return true; } return false; }
+
+/* ---------- build pickers ---------- */
+function buildBankPanel(){
+  const p=$('#bankPanel');
+  let h='<div class="srch"><input placeholder="Tìm ngân hàng…" oninput="filterPanel(this,\'#bankPanel\')"></div>';
+  h+='<div class="ptools"><a onclick="allBanks(true)">Chọn tất cả</a><a onclick="allBanks(false)">Bỏ chọn</a></div><div class="list">';
+  DB.meta.banks.forEach(b=>{
+    h+=`<label class="opt" data-s="${b.toLowerCase()}"><input type="checkbox" value="${b}" onchange="toggleBank(this)">
+        <span class="dot" style="background:${BANK_COLOR[b]}"></span><span class="nm">${b}</span></label>`;
+  });
+  p.innerHTML=h+'</div>';
+}
+const SEC_ORDER=['BS','IS','CF','NOTE','RATIO'];
+function buildMetricPanel(){
+  const p=$('#metPanel');
+  let h='<div class="srch"><input placeholder="Tìm chỉ tiêu… (vd: cho vay, NIM, lợi nhuận)" oninput="filterPanel(this,\'#metPanel\')"></div>';
+  h+='<div class="ptools"><a onclick="collapseAll(true)">Thu gọn</a><a onclick="collapseAll(false)">Mở rộng</a></div><div class="list">';
+  SEC_ORDER.forEach(sc=>{
+    const sec=DB.sections.find(s=>s.id===sc);
+    const ms=DB.metrics.filter(m=>m.section===sc && hasAny(m.id));
+    if(!ms.length) return;
+    h+=`<div class="sec-h" data-sec="${sc}" onclick="toggleSec('${sc}')"><span>${sec.name}</span><span>${ms.length} ▾</span></div>`;
+    ms.forEach(m=>{
+      const pad=8+m.level*14;
+      const ud={bn:'tỷ',pct:'%',x:'lần'}[m.unit];
+      h+=`<label class="opt sec-${sc}" data-s="${m.label.toLowerCase()}" style="padding-left:${pad}px">
+          <input type="checkbox" value="${m.id}" onchange="toggleMetric(this)">
+          <span class="nm">${m.label}</span><span class="u">${ud}</span></label>`;
+    });
+  });
+  p.innerHTML=h+'</div>';
+}
+function filterPanel(inp,sel){
+  const q=inp.value.trim().toLowerCase();
+  $$(`${sel} .opt`).forEach(o=>{ o.style.display = !q||o.dataset.s.includes(q) ? '' : 'none'; });
+  $$(`${sel} .sec-h`).forEach(s=>{ s.style.display = q?'none':''; });
+}
+function toggleSec(sc){ $$(`#metPanel .sec-${sc}`).forEach(o=>o.classList.toggle('hide')); }
+function collapseAll(c){ $$('#metPanel .opt[class*="sec-"]').forEach(o=>o.classList.toggle('hide',c)); }
+
+/* ---------- selection handlers ---------- */
+function toggleBank(cb){
+  if(cb.checked){ if(!state.banks.includes(cb.value)) state.banks.push(cb.value); }
+  else state.banks=state.banks.filter(b=>b!==cb.value);
+  $('#bankCnt').textContent=state.banks.length; syncChips(); render();
+}
+function allBanks(on){
+  state.banks = on ? [...DB.meta.banks] : [];
+  $$('#bankPanel input').forEach(i=>i.checked=on);
+  $('#bankCnt').textContent=state.banks.length; syncChips(); render();
+}
+function toggleMetric(cb){
+  if(cb.checked){ if(!state.metrics.includes(cb.value)) state.metrics.push(cb.value); }
+  else state.metrics=state.metrics.filter(m=>m!==cb.value);
+  $('#metCnt').textContent=state.metrics.length; syncChips(); render();
+}
+function removeChip(kind,val){
+  if(kind==='b'){ state.banks=state.banks.filter(b=>b!==val); $(`#bankPanel input[value="${val}"]`).checked=false; $('#bankCnt').textContent=state.banks.length; }
+  else { state.metrics=state.metrics.filter(m=>m!==val); const el=$(`#metPanel input[value="${CSS.escape(val)}"]`); if(el)el.checked=false; $('#metCnt').textContent=state.metrics.length; }
+  syncChips(); render();
+}
+function syncChips(){
+  if(state.mode!=='compare'){ $('#chips').innerHTML=''; return; }
+  let h='';
+  state.banks.forEach(b=>{ h+=`<span class="chip"><span class="dot" style="background:${BANK_COLOR[b]}"></span>${b}<button class="x" onclick="removeChip('b','${b}')">×</button></span>`; });
+  state.metrics.forEach(mid=>{ const m=M_BY_ID[mid]; h+=`<span class="chip">${m.label}<button class="x" onclick="removeChip('m','${mid.replace(/'/g,"\\'")}')">×</button></span>`; });
+  $('#chips').innerHTML=h;
+}
+
+/* ---------- range selectors ---------- */
+function fillRange(){
+  const ps=periodsAll();
+  ['#rngFrom','#rngTo','#atSel'].forEach(id=>$(id).innerHTML=ps.map((p,i)=>`<option value="${i}">${p}</option>`).join(''));
+  // default: last ~8 years or ~12 quarters
+  const span=state.gran==='y'?8:12;
+  state.from=Math.max(0, ps.length-span); state.to=ps.length-1; state.at=ps.length-1;
+  $('#rngFrom').value=state.from; $('#rngTo').value=state.to; $('#atSel').value=state.at;
+  $('#rngLbl').textContent = state.gran==='y'?'Khoảng năm':'Khoảng quý';
+}
+
+/* ---------- breakdown setup ---------- */
+function breakdownGroups(){
+  const seen=new Set(), out=[];
+  DB.metrics.forEach(m=>{ if(m.breakdown&&m.group&&!seen.has(m.group)){ seen.add(m.group); out.push(m.group); } });
+  return out;
+}
+function buildBreakdownControls(){
+  $('#bkBank').innerHTML=DB.meta.banks.map(b=>`<option>${b}</option>`).join('');
+  $('#bkGroup').innerHTML=breakdownGroups().map(g=>`<option>${g}</option>`).join('');
+  state.bkBank=DB.meta.banks[0]; state.bkGroup=breakdownGroups()[0];
+}
+function groupComponents(group){
+  // direct children (level just below the group header) that carry data
+  const all=DB.metrics.filter(m=>m.group===group && m.level>=1);
+  const minLvl=Math.min(...all.map(m=>m.level));
+  return all.filter(m=>m.level===minLvl);
+}
+
+/* ---------- main render ---------- */
+function render(){ state.mode==='compare'?renderCompare():renderBreak(); }
+
+function seriesColor(i){ return PALETTE[i%PALETTE.length]; }
+
+function renderCompare(){
+  const banks=state.banks, mets=state.metrics.map(id=>M_BY_ID[id]);
+  $('#atWrap').classList.toggle('hide', state.xaxis!=='bank');
+  if(!banks.length || !mets.length){
+    $('#ctit').textContent='Chọn ngân hàng và chỉ tiêu';
+    $('#csub').textContent='';
+    $('#stats').innerHTML=''; $('#foot').textContent='';
+    chart.clear();
+    chart.setOption({graphic:{type:'text',left:'center',top:'middle',style:{text:'Chọn ít nhất 1 ngân hàng và 1 chỉ tiêu',fill:'#6B7280',font:'14px IBM Plex Sans'}}});
+    return;
+  }
+  const units=new Set(mets.map(m=>m.unit));
+  const hasPct=units.has('pct'), hasAbs=units.has('bn')||units.has('x');
+  const dual=hasPct&&hasAbs;
+  const ps=rangeList();
+  const tlabel={group:'cột nhóm',stack:'cột chồng',line:'đường',area:'vùng',combo:'kết hợp'}[state.type];
+
+  let xData, series=[], sUnits=[];
+  const onRight=u=>dual&&u==='pct';
+  const stacked=(state.type==='stack'||state.type==='area');
+
+  if(state.xaxis==='time'){
+    xData=ps;
+    let ci=0;
+    banks.forEach(b=>{
+      mets.forEach(m=>{
+        const name = mets.length>1 ? `${b} · ${m.label}` : b;
+        const color = mets.length>1 ? seriesColor(ci) : BANK_COLOR[b];
+        series.push(makeSeries(name,color,m,ps.map(p=>round(val(b,m.id,p))),onRight(m.unit),stacked?b:null,state.type==='combo'?m.unit:null));
+        sUnits.push(m.unit); ci++;
+      });
+    });
+  } else { // xaxis bank
+    xData=banks;
+    const at=periodsAll()[state.at];
+    mets.forEach((m,i)=>{
+      series.push(makeSeries(m.label, seriesColor(i), m, banks.map(b=>round(val(b,m.id,at))), onRight(m.unit), stacked?'g':null, state.type==='combo'?m.unit:null));
+      sUnits.push(m.unit);
+    });
+  }
+
+  const opt=baseOpt(xData, series, dual, mets, sUnits);
+  chart.setOption(opt, true);
+
+  // titles
+  $('#ctit').textContent = mets.length===1 ? mets[0].label : `${mets.length} chỉ tiêu × ${banks.length} ngân hàng`;
+  const rangeTxt = state.xaxis==='bank' ? ('kỳ '+periodsAll()[state.at]) : (ps[0]+'–'+ps[ps.length-1]);
+  $('#csub').textContent = `${tlabel} · trục hoành: ${state.xaxis==='time'?'thời gian':'ngân hàng'} · ${rangeTxt}`;
+  $('#foot').innerHTML = `Đơn vị: ${[...units].map(u=>({bn:'tỷ đồng',pct:'%',x:'lần'}[u])).join(', ')}. `+
+    (dual?'Trục trái = giá trị tuyệt đối, trục phải = %. ':'')+
+    'Ô trống trong nguồn được tính bằng 0. Nguồn: FiinPro.';
+  renderStatsCompare(banks, mets);
+}
+
+function makeSeries(name,color,m,data,right,stackId,comboUnit){
+  let type=state.type, areaStyle=null, stack=null;
+  if(state.type==='group'){ type='bar'; }
+  else if(state.type==='stack'){ type='bar'; stack=stackId||'s'; }
+  else if(state.type==='line'){ type='line'; }
+  else if(state.type==='area'){ type='line'; areaStyle={opacity:.18}; stack=stackId||'s'; }
+  else if(state.type==='combo'){ type = comboUnit==='pct' ? 'line' : 'bar'; }
+  const s={ name, type, data,
+    itemStyle:{color, borderRadius: type==='bar'?[3,3,0,0]:0},
+    lineStyle:{color,width:2}, symbol:'circle', symbolSize:6,
+    yAxisIndex: right?1:0, barMaxWidth:34 };
+  if(areaStyle) s.areaStyle={color,opacity:.16};
+  if(stack) s.stack=stack;
+  if(type==='line'){ s.itemStyle={color}; }
+  return s;
+}
+
+function baseOpt(xData, series, dual, mets, sUnits){
+  const absUnit = mets.find(m=>m.unit!=='pct'); const absU = absUnit?absUnit.unit:'bn';
+  const yLeft={ type:'value', name: dual?'giá trị':({bn:'tỷ đồng',pct:'%',x:'lần'}[mets[0].unit]),
+    nameTextStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#6B7280'},
+    splitLine:{lineStyle:{color:'#EEF0F3'}},
+    axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11, formatter: v=> (dual||absU!=='pct')?fmtAxisBn(v):v+'%'} };
+  const yRight={ type:'value', name:'%', position:'right',
+    nameTextStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#6B7280'},
+    splitLine:{show:false}, axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11,formatter:v=>v+'%'} };
+  const yAxis = dual ? [yLeft,yRight] : [yLeft];
+  const manyX = xData.length>8;
+  return {
+    textStyle:{fontFamily:'IBM Plex Sans'},
+    tooltip:{ trigger:'axis', backgroundColor:'#16181D', borderColor:'#16181D',
+      textStyle:{color:'#fff',fontFamily:'IBM Plex Mono',fontSize:12},
+      formatter:params=>{
+        let s=`<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
+        params.forEach(p=>{
+          const u = sUnits[p.seriesIndex]||'bn';
+          s+=`<div style="display:flex;justify-content:space-between;gap:14px"><span>${p.marker}${p.seriesName}</span><b>${fmtVal(u,p.value)}</b></div>`;
+        });
+        return s;
+      } },
+    legend:{ type:'scroll', data:series.map(s=>s.name), bottom:0, icon:'roundRect',
+      textStyle:{fontFamily:'IBM Plex Mono',fontSize:11} },
+    grid:{ left:60, right: dual?56:24, top:22, bottom: series.length>1?52:34 },
+    xAxis:{ type:'category', data:xData,
+      axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11, rotate: manyX?38:0, interval: xData.length>24?'auto':0},
+      axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9CDD6'}} },
+    yAxis, series
+  };
+}
+function round(v){ return v==null?0:Math.round(v*100)/100; }
+
+function renderStatsCompare(banks, mets){
+  // show latest value per bank for the first metric
+  const m=mets[0]; const ps=rangeList(); const last=ps[ps.length-1];
+  let h='';
+  banks.slice(0,8).forEach(b=>{
+    const v=val(b,m.id,last);
+    const prev=ps.length>1?val(b,m.id,ps[ps.length-2]):null;
+    let d='';
+    if(prev){ const ch=v-prev; const pc= prev!==0?(ch/Math.abs(prev)*100):null;
+      d = (ch>=0?'▲ ':'▼ ')+(pc!=null?Math.abs(pc).toFixed(1)+'% so kỳ trước':''); }
+    h+=`<div class="st"><div class="h"><span class="dot" style="width:9px;height:9px;border-radius:3px;background:${BANK_COLOR[b]}"></span>${b}</div>
+        <div class="v">${fmtVal(m.unit,v)}</div><div class="d">${m.label} · ${last}<br>${d}</div></div>`;
+  });
+  $('#stats').innerHTML=h;
+}
+
+/* ---------- breakdown render ---------- */
+function renderBreak(){
+  $('#atWrap').classList.add('hide');
+  const bank=state.bkBank, group=state.bkGroup;
+  const comps=groupComponents(group).filter(m=>{ const d=DB.data[bank][m.id]; return d&&(d.y||d.q); });
+  const ps=rangeList();
+  if(!comps.length){
+    $('#ctit').textContent=group; $('#csub').textContent=bank;
+    $('#stats').innerHTML=''; $('#foot').textContent='Ngân hàng này không có dữ liệu phân rã cho nhóm đã chọn.';
+    chart.clear();
+    chart.setOption({graphic:{type:'text',left:'center',top:'middle',style:{text:`${bank} không có dữ liệu cho nhóm này`,fill:'#6B7280',font:'14px IBM Plex Sans'}}});
+    return;
+  }
+  // matrix comp x period
+  const totals=ps.map(p=>comps.reduce((s,m)=>s+val(bank,m.id,p),0));
+  const share=state.bkView==='share';
+  const stacked=(state.type!=='line');
+  const series=comps.map((m,i)=>{
+    const data=ps.map((p,pi)=> share ? (totals[pi]?round(val(bank,m.id,p)/totals[pi]*100):0) : round(val(bank,m.id,p)));
+    const color=seriesColor(i);
+    const s={ name:m.label, type: state.type==='line'?'line':'bar', data,
+      itemStyle:{color,borderRadius:state.type==='line'?0:[2,2,0,0]}, lineStyle:{color,width:2}, symbol:'circle',symbolSize:5,
+      stack: stacked?'g':null, barMaxWidth:46 };
+    if(state.type==='area'||state.type==='line'){ s.type='line'; s.areaStyle=state.type==='area'?{color,opacity:.85}:null; s.stack=state.type==='area'?'g':null; s.lineStyle={color,width:2}; }
+    return s;
+  });
+  chart.setOption({
+    textStyle:{fontFamily:'IBM Plex Sans'},
+    color:PALETTE,
+    tooltip:{ trigger:'axis', backgroundColor:'#16181D', borderColor:'#16181D',
+      textStyle:{color:'#fff',fontFamily:'IBM Plex Mono',fontSize:12},
+      formatter:params=>{
+        let s=`<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
+        const tot=params.reduce((a,p)=>a+(p.value||0),0);
+        [...params].reverse().forEach(p=>{ if(!p.value)return;
+          s+=`<div style="display:flex;justify-content:space-between;gap:14px"><span>${p.marker}${p.seriesName}</span><b>${share?p.value.toFixed(1)+'%':fmtBn(p.value)}</b></div>`; });
+        if(!share) s+=`<div style="border-top:1px solid #444;margin-top:4px;padding-top:3px;display:flex;justify-content:space-between"><span>Tổng</span><b>${fmtBn(tot)}</b></div>`;
+        return s;
+      } },
+    legend:{ type:'scroll', data:comps.map(m=>m.label), bottom:0, icon:'roundRect', textStyle:{fontFamily:'IBM Plex Mono',fontSize:11} },
+    grid:{ left:60, right:24, top:22, bottom:54 },
+    xAxis:{ type:'category', data:ps, axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11,rotate:ps.length>8?38:0},
+      axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9CDD6'}} },
+    yAxis:{ type:'value', name: share?'% tỷ trọng':'tỷ đồng', max: share?100:null,
+      nameTextStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#6B7280'},
+      splitLine:{lineStyle:{color:'#EEF0F3'}}, axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11,formatter:v=>share?v+'%':fmtAxisBn(v)} },
+    series
+  }, true);
+
+  $('#ctit').textContent=group;
+  $('#csub').textContent=`${bank} · ${comps.length} cấu phần · ${ps[0]}–${ps[ps.length-1]} · ${share?'tỷ trọng %':'giá trị tuyệt đối'}`;
+  $('#foot').innerHTML='Phân rã từ Thuyết minh BCTC. Cấu phần không có số liệu (rỗng) coi như 0. Nguồn: FiinPro.';
+  // stats: latest composition
+  const lastI=ps.length-1, tot=totals[lastI];
+  let rows=comps.map((m,i)=>({m,v:val(bank,m.id,ps[lastI]),c:seriesColor(i)})).filter(r=>r.v).sort((a,b)=>b.v-a.v).slice(0,8);
+  $('#stats').innerHTML=rows.map(r=>`<div class="st"><div class="h"><span class="dot" style="width:9px;height:9px;border-radius:3px;background:${r.c}"></span>${r.m.label}</div>
+    <div class="v">${tot?(r.v/tot*100).toFixed(1)+'%':'–'}</div><div class="d">${fmtBn(r.v)} · ${ps[lastI]}</div></div>`).join('');
+}
+
+/* ---------- wiring ---------- */
+function setMode(m){
+  state.mode=m;
+  $$('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+  $$('.mode-compare').forEach(e=>e.classList.toggle('hide', m!=='compare'));
+  $$('.mode-break').forEach(e=>e.classList.toggle('hide', m!=='break'));
+  $('#xSeg').closest('.ctrl').classList.toggle('hide', m!=='compare');
+  if(m==='break'){ // limit chart types
+    $$('#typeSeg button').forEach(b=>b.classList.toggle('hide',!['stack','area','line'].includes(b.dataset.t)));
+    if(!['stack','area','line'].includes(state.type)) setType('stack');
+  } else $$('#typeSeg button').forEach(b=>b.classList.remove('hide'));
+  syncChips(); render();
+}
+function setType(t){ state.type=t; $$('#typeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t)); render(); }
+
+function init(){
+  DB.meta.banks.forEach((b,i)=>BANK_COLOR[b]=PALETTE[i%PALETTE.length]);
+  DB.metrics.forEach(m=>M_BY_ID[m.id]=m);
+  $('#cover').innerHTML=`${DB.meta.banks.length} ngân hàng · ${DB.metrics.length} chỉ tiêu · năm ${DB.periods.years[0]}–${DB.periods.years.at(-1)} · quý ${DB.periods.quarters[0]}–${DB.periods.quarters.at(-1)}`;
+  $('#boot').classList.add('hide'); $('#app').classList.remove('hide');
+  chart=echarts.init($('#chart'));
+  buildBankPanel(); buildMetricPanel(); buildBreakdownControls(); fillRange();
+
+  // default selection for a useful first view
+  ['VCB','BID','CTG','TCB','ACB'].forEach(b=>{ if(DB.meta.banks.includes(b)){ state.banks.push(b); const cb=$(`#bankPanel input[value="${b}"]`); if(cb)cb.checked=true; } });
+  const ta=DB.metrics.find(m=>m.id==='BS|TỔNG TÀI SẢN'); if(ta){ state.metrics.push(ta.id); const cb=$(`#metPanel input[value="${CSS.escape(ta.id)}"]`); if(cb)cb.checked=true; }
+  $('#bankCnt').textContent=state.banks.length; $('#metCnt').textContent=state.metrics.length;
+  syncChips();
+
+  // pickers open/close
+  $$('.pick .trig').forEach(t=>t.onclick=e=>{ e.stopPropagation(); const pn=t.nextElementSibling; $$('.panel').forEach(p=>{if(p!==pn)p.classList.remove('open')}); pn.classList.toggle('open'); });
+  document.addEventListener('click',()=>$$('.panel').forEach(p=>p.classList.remove('open')));
+  $$('.panel').forEach(p=>p.onclick=e=>e.stopPropagation());
+
+  // segmented controls
+  $$('#modeSeg button').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+  $$('#typeSeg button').forEach(b=>b.onclick=()=>setType(b.dataset.t));
+  $$('#xSeg button').forEach(b=>b.onclick=()=>{ state.xaxis=b.dataset.x; $$('#xSeg button').forEach(x=>x.classList.toggle('on',x===b)); render(); });
+  $$('#granSeg button').forEach(b=>b.onclick=()=>{ state.gran=b.dataset.g; $$('#granSeg button').forEach(x=>x.classList.toggle('on',x===b)); fillRange(); render(); });
+  $$('#bkView button').forEach(b=>b.onclick=()=>{ state.bkView=b.dataset.v; $$('#bkView button').forEach(x=>x.classList.toggle('on',x===b)); render(); });
+
+  $('#rngFrom').onchange=e=>{ state.from=+e.target.value; if(state.from>state.to){state.to=state.from;$('#rngTo').value=state.to;} render(); };
+  $('#rngTo').onchange=e=>{ state.to=+e.target.value; if(state.to<state.from){state.from=state.to;$('#rngFrom').value=state.from;} render(); };
+  $('#atSel').onchange=e=>{ state.at=+e.target.value; render(); };
+  $('#bkBank').onchange=e=>{ state.bkBank=e.target.value; render(); };
+  $('#bkGroup').onchange=e=>{ state.bkGroup=e.target.value; render(); };
+
+  $('#exportBtn').onclick=()=>{ const url=chart.getDataURL({pixelRatio:2,backgroundColor:'#fff'}); const a=document.createElement('a'); a.href=url; a.download='bank-chart.png'; a.click(); };
+  window.addEventListener('resize',()=>chart.resize());
+  render();
+}
+
+fetch('bank_data.json').then(r=>{ if(!r.ok)throw new Error(r.status); return r.json(); })
+  .then(d=>{ DB=d; init(); })
+  .catch(e=>{ $('#boot').innerHTML=`Không tải được <b>bank_data.json</b> (${e.message}).<br><span style="font-size:12px">Đảm bảo file nằm cùng thư mục với index.html và đang chạy qua web server (GitHub Pages) chứ không mở bằng file://.</span>`; });
+</script>
+</body>
+</html>
