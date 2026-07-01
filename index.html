@@ -3,105 +3,133 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>So sánh ngành ngân hàng</title>
+<title>Virtus Prosperity · Phân tích ngành ngân hàng</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#EEF0F3; --panel:#FFFFFF; --ink:#16181D; --muted:#6B7280;
-    --line:#E0E3E9; --line-strong:#C9CDD6; --radius:10px; --accent:#1D4ED8;
+    --bg:#F4F0E9; --panel:#FFFFFF; --panel2:#FCFAF5; --ink:#211C16; --muted:#8C8276;
+    --line:#E8E2D6; --line-strong:#D8CFBE; --radius:8px;
+    --gold:#9B7B47; --gold-soft:#B89A66; --gold-deep:#7C6035; --accent:#9B7B47;
     --mono:'IBM Plex Mono',ui-monospace,monospace;
     --sans:'IBM Plex Sans',system-ui,sans-serif;
+    --serif:'EB Garamond',Georgia,serif;
+    --display:'Cinzel',Georgia,serif;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;height:100%;}
   body{font-family:var(--sans);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;}
   button{font-family:var(--sans);cursor:pointer;}
 
-  header{padding:18px 24px 14px;border-bottom:1px solid var(--line);background:var(--panel);display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;}
-  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 5px;}
-  header h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em;}
-  .cover{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px;}
-  .hbtn{font-family:var(--mono);font-size:12px;border:1px solid var(--line-strong);background:#fff;color:var(--ink);padding:8px 12px;border-radius:8px;}
-  .hbtn:hover{border-color:var(--ink);}
+  /* header / brand */
+  header{padding:0;background:var(--panel);border-bottom:1px solid var(--line);position:relative;}
+  header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:linear-gradient(90deg,var(--gold) 0%,var(--gold-soft) 38%,transparent 80%);}
+  .brandbar{display:flex;align-items:center;gap:12px;padding:14px 26px 10px;}
+  .mark{width:30px;height:36px;flex:0 0 auto;}
+  .brandtxt{line-height:1;}
+  .brandtxt .nm{font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:.16em;color:var(--gold-deep);}
+  .brandtxt .tg{font-family:var(--mono);font-size:9.5px;letter-spacing:.34em;text-transform:uppercase;color:var(--muted);margin-top:3px;}
+  .brandbar .spacer{flex:1;}
+  .titlebar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:4px 26px 16px;border-top:1px solid var(--line);}
+  .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin:0 0 6px;}
+  header h1{margin:0;font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:.005em;color:var(--ink);}
+  .cover{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:7px;letter-spacing:.02em;}
+  .hbtn{font-family:var(--mono);font-size:12px;border:1px solid var(--line-strong);background:#fff;color:var(--ink);padding:9px 14px;border-radius:7px;letter-spacing:.02em;transition:.15s;}
+  .hbtn:hover{border-color:var(--gold);color:var(--gold-deep);}
 
-  .wrap{padding:16px 24px 40px;max-width:1320px;margin:0 auto;}
+  .wrap{padding:18px 26px 48px;max-width:1320px;margin:0 auto;}
 
   /* control bar */
-  .bar{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;}
-  .row{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:flex-end;}
-  .ctrl{display:flex;flex-direction:column;gap:6px;}
-  .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .bar{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-bottom:18px;box-shadow:0 1px 2px rgba(33,28,22,.03);}
+  .row{display:flex;flex-wrap:wrap;gap:15px 20px;align-items:flex-end;}
+  .ctrl{display:flex;flex-direction:column;gap:7px;}
+  .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);}
 
   /* segmented */
-  .seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;background:#fff;}
-  .seg button{border:0;background:#fff;padding:8px 13px;font-size:13px;color:var(--muted);border-right:1px solid var(--line);}
+  .seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:7px;overflow:hidden;background:#fff;}
+  .seg button{border:0;background:#fff;padding:8px 13px;font-size:13px;color:var(--muted);border-right:1px solid var(--line);transition:.12s;}
   .seg button:last-child{border-right:0;}
-  .seg button.on{background:var(--ink);color:#fff;font-weight:500;}
+  .seg button:hover{color:var(--ink);background:var(--panel2);}
+  .seg button.on{background:var(--ink);color:#F4F0E9;font-weight:500;}
+  .seg button.on:hover{background:var(--ink);}
   .seg.sm button{padding:7px 11px;font-size:12px;font-family:var(--mono);}
 
   /* dropdown picker */
   .pick{position:relative;}
-  .pick>.trig{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-strong);background:#fff;border-radius:8px;padding:8px 12px;font-size:13px;min-width:190px;justify-content:space-between;}
-  .pick>.trig:hover{border-color:var(--ink);}
-  .trig .cnt{font-family:var(--mono);font-size:11px;color:#fff;background:var(--accent);border-radius:20px;padding:1px 7px;}
-  .panel{position:absolute;z-index:40;top:calc(100% + 6px);left:0;width:360px;max-width:86vw;background:#fff;border:1px solid var(--line-strong);border-radius:10px;box-shadow:0 12px 32px rgba(20,24,29,.16);display:none;overflow:hidden;}
+  .pick>.trig{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-strong);background:#fff;border-radius:7px;padding:9px 13px;font-size:13px;min-width:195px;justify-content:space-between;transition:.12s;}
+  .pick>.trig:hover{border-color:var(--gold);}
+  .trig .cnt{font-family:var(--mono);font-size:11px;color:#fff;background:var(--gold);border-radius:20px;padding:1px 7px;}
+  .panel{position:absolute;z-index:40;top:calc(100% + 6px);left:0;width:370px;max-width:86vw;background:#fff;border:1px solid var(--line-strong);border-radius:9px;box-shadow:0 16px 40px rgba(33,28,22,.16);display:none;overflow:hidden;}
   .panel.open{display:block;}
-  .panel .srch{padding:10px;border-bottom:1px solid var(--line);}
-  .panel .srch input{width:100%;border:1px solid var(--line-strong);border-radius:7px;padding:8px 10px;font-family:var(--sans);font-size:13px;}
-  .panel .srch input:focus{outline:none;border-color:var(--accent);}
-  .panel .list{max-height:360px;overflow-y:auto;}
-  .panel .ptools{display:flex;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;}
-  .panel .ptools a{color:var(--accent);cursor:pointer;text-decoration:none;}
-  .sec-h{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:#F6F7F9;padding:7px 12px;position:sticky;top:0;cursor:pointer;display:flex;justify-content:space-between;border-top:1px solid var(--line);}
-  .opt{display:flex;align-items:center;gap:9px;padding:6px 12px;font-size:13px;cursor:pointer;}
-  .opt:hover{background:#F6F7F9;}
-  .opt.hd{color:var(--muted);font-size:12px;cursor:default;}
-  .opt.hd:hover{background:#fff;}
-  .opt input{accent-color:var(--accent);width:15px;height:15px;flex:0 0 auto;}
+  .panel .srch{padding:11px;border-bottom:1px solid var(--line);}
+  .panel .srch input{width:100%;border:1px solid var(--line-strong);border-radius:6px;padding:9px 11px;font-family:var(--sans);font-size:13px;}
+  .panel .srch input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(155,123,71,.12);}
+  .panel .list{max-height:368px;overflow-y:auto;}
+  .panel .ptools{display:flex;gap:12px;padding:9px 13px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;}
+  .panel .ptools a{color:var(--gold-deep);cursor:pointer;text-decoration:none;}
+  .panel .ptools a:hover{text-decoration:underline;}
+  .sec-h{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-deep);background:var(--panel2);padding:8px 13px;position:sticky;top:0;cursor:pointer;display:flex;justify-content:space-between;border-top:1px solid var(--line);}
+  .opt{display:flex;align-items:center;gap:9px;padding:6px 13px;font-size:13px;cursor:pointer;}
+  .opt:hover{background:var(--panel2);}
+  .opt input{accent-color:var(--gold);width:15px;height:15px;flex:0 0 auto;}
   .opt .nm{line-height:1.25;}
-  .opt .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto;}
+  .opt .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto;}
   .opt .u{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;flex:0 0 auto;}
 
   /* chips */
-  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
-  .chip{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line-strong);border-radius:20px;padding:4px 6px 4px 10px;font-size:12px;font-family:var(--mono);}
-  .chip .dot{width:9px;height:9px;border-radius:3px;}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px;}
+  .chip{display:inline-flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid var(--line-strong);border-radius:20px;padding:4px 6px 4px 11px;font-size:12px;font-family:var(--mono);}
+  .chip .dot{width:9px;height:9px;border-radius:2px;}
   .chip .x{border:0;background:none;color:var(--muted);font-size:15px;line-height:1;padding:0 2px;cursor:pointer;}
-  .chip .x:hover{color:var(--ink);}
+  .chip .x:hover{color:var(--gold-deep);}
 
   /* range */
-  .rng{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;}
-  .rng select{font-family:var(--mono);font-size:12px;border:1px solid var(--line-strong);border-radius:7px;padding:7px 8px;background:#fff;}
+  .rng{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;color:var(--muted);}
+  .rng select{font-family:var(--mono);font-size:12px;border:1px solid var(--line-strong);border-radius:6px;padding:8px 9px;background:#fff;color:var(--ink);}
+  .rng select:focus{outline:none;border-color:var(--gold);}
 
   /* chart card */
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 18px 8px;}
-  .ctit{font-size:17px;font-weight:600;margin:0;}
-  .csub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;}
-  #chart{width:100%;height:480px;margin-top:6px;}
-  .foot{font-size:12px;color:var(--muted);border-top:1px solid var(--line);margin-top:6px;padding-top:10px;line-height:1.5;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 20px 10px;box-shadow:0 1px 2px rgba(33,28,22,.03);position:relative;}
+  .card::before{content:"";position:absolute;top:0;left:0;width:46px;height:2px;background:var(--gold);border-radius:0 0 2px 0;}
+  .ctit{font-family:var(--serif);font-size:21px;font-weight:600;margin:0;letter-spacing:.005em;}
+  .csub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:5px;letter-spacing:.02em;}
+  #chart{width:100%;height:486px;margin-top:8px;}
+  .foot{font-size:12px;color:var(--muted);border-top:1px solid var(--line);margin-top:6px;padding-top:11px;line-height:1.55;}
 
-  .stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
-  .st{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 12px;min-width:150px;flex:1 1 150px;}
+  .stats{display:flex;flex-wrap:wrap;gap:11px;margin-top:16px;}
+  .st{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;min-width:152px;flex:1 1 152px;box-shadow:0 1px 2px rgba(33,28,22,.03);}
   .st .h{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--muted);}
-  .st .v{font-family:var(--mono);font-size:18px;font-weight:600;margin-top:5px;}
-  .st .d{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;}
+  .st .v{font-family:var(--mono);font-size:19px;font-weight:600;margin-top:6px;color:var(--ink);}
+  .st .d{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px;}
 
   .hide{display:none!important;}
-  .loading{padding:60px;text-align:center;color:var(--muted);font-family:var(--mono);}
-  @media(max-width:640px){ .wrap{padding:12px;} #chart{height:380px;} header h1{font-size:19px;} }
+  .loading{padding:64px 20px;text-align:center;color:var(--muted);font-family:var(--mono);line-height:1.7;}
+  @media(max-width:640px){ .wrap{padding:14px;} #chart{height:380px;} header h1{font-size:21px;} .brandbar,.titlebar{padding-left:16px;padding-right:16px;} }
 </style>
 </head>
 <body>
 <header>
-  <div>
-    <p class="eyebrow">FiinPro · Phân tích ngành</p>
-    <h1>So sánh ngành ngân hàng Việt Nam</h1>
-    <div class="cover" id="cover">Đang tải dữ liệu…</div>
+  <div class="brandbar">
+    <svg class="mark" viewBox="0 0 60 72" aria-hidden="true">
+      <path d="M30 2 C38 7 50 9 57 9 L57 38 C57 56 45 66 30 71 C15 66 3 56 3 38 L3 9 C10 9 22 7 30 2 Z" fill="#9B7B47"/>
+      <path d="M30 12 C30 26 21 33 18 44 C24 47 28 41 30 35 C32 41 36 47 42 44 C39 33 30 26 30 12 Z" fill="#FFFFFF"/>
+    </svg>
+    <div class="brandtxt">
+      <div class="nm">VIRTUS PROSPERITY</div>
+      <div class="tg">Consulting &amp; Investment</div>
+    </div>
+    <div class="spacer"></div>
   </div>
-  <button class="hbtn" id="exportBtn">↓ Xuất ảnh PNG</button>
+  <div class="titlebar">
+    <div>
+      <p class="eyebrow">Research &amp; Insight · FiinPro</p>
+      <h1>Phân tích ngành ngân hàng Việt Nam</h1>
+      <div class="cover" id="cover">Đang tải dữ liệu…</div>
+    </div>
+    <button class="hbtn" id="exportBtn">↓ Xuất ảnh PNG</button>
+  </div>
 </header>
 
 <div class="wrap">
@@ -208,9 +236,9 @@
 </div>
 
 <script>
-const PALETTE = ['#1D4ED8','#DC2626','#059669','#D97706','#7C3AED','#0891B2','#DB2777','#65A30D',
-                 '#475569','#EA580C','#0D9488','#9333EA','#CA8A04','#E11D48','#2563EB','#16A34A',
-                 '#B45309','#4F46E5','#BE123C','#0E7490','#A21CAF','#15803D','#92400E','#1E40AF','#9F1239','#155E75'];
+const PALETTE = ['#9B7B47','#3C5A6E','#8C3B3B','#4F6F52','#B08A4F','#5A4A6A','#2F6F73','#8A5A3C',
+                 '#41607F','#7C4B5C','#3F5E4B','#6B4F3A','#94703F','#4A5468','#7A3F4A','#566B3C',
+                 '#476B82','#615070','#86523F','#3E6660','#A07A4A','#7B5340','#445F73','#5C5C6E','#8A7238','#63494F'];
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 let DB, M_BY_ID={}, BANK_COLOR={}, chart;
 
@@ -356,7 +384,7 @@ function renderCompare(){
     $('#csub').textContent='';
     $('#stats').innerHTML=''; $('#foot').textContent='';
     chart.clear();
-    chart.setOption({graphic:{type:'text',left:'center',top:'middle',style:{text:'Chọn ít nhất 1 ngân hàng và 1 chỉ tiêu',fill:'#6B7280',font:'14px IBM Plex Sans'}}});
+    chart.setOption({graphic:{type:'text',left:'center',top:'middle',style:{text:'Chọn ít nhất 1 ngân hàng và 1 chỉ tiêu',fill:'#8C8276',font:'14px IBM Plex Sans'}}});
     return;
   }
   const units=new Set(mets.map(m=>m.unit));
@@ -422,17 +450,17 @@ function makeSeries(name,color,m,data,right,stackId,comboUnit){
 function baseOpt(xData, series, dual, mets, sUnits){
   const absUnit = mets.find(m=>m.unit!=='pct'); const absU = absUnit?absUnit.unit:'bn';
   const yLeft={ type:'value', name: dual?'giá trị':({bn:'tỷ đồng',pct:'%',x:'lần'}[mets[0].unit]),
-    nameTextStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#6B7280'},
-    splitLine:{lineStyle:{color:'#EEF0F3'}},
+    nameTextStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#8C8276'},
+    splitLine:{lineStyle:{color:'#EFE9DD'}},
     axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11, formatter: v=> (dual||absU!=='pct')?fmtAxisBn(v):v+'%'} };
   const yRight={ type:'value', name:'%', position:'right',
-    nameTextStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#6B7280'},
+    nameTextStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#8C8276'},
     splitLine:{show:false}, axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11,formatter:v=>v+'%'} };
   const yAxis = dual ? [yLeft,yRight] : [yLeft];
   const manyX = xData.length>8;
   return {
     textStyle:{fontFamily:'IBM Plex Sans'},
-    tooltip:{ trigger:'axis', backgroundColor:'#16181D', borderColor:'#16181D',
+    tooltip:{ trigger:'axis', backgroundColor:'#211C16', borderColor:'#211C16',
       textStyle:{color:'#fff',fontFamily:'IBM Plex Mono',fontSize:12},
       formatter:params=>{
         let s=`<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
@@ -447,7 +475,7 @@ function baseOpt(xData, series, dual, mets, sUnits){
     grid:{ left:60, right: dual?56:24, top:22, bottom: series.length>1?52:34 },
     xAxis:{ type:'category', data:xData,
       axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11, rotate: manyX?38:0, interval: xData.length>24?'auto':0},
-      axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9CDD6'}} },
+      axisTick:{show:false}, axisLine:{lineStyle:{color:'#D8CFBE'}} },
     yAxis, series
   };
 }
@@ -479,7 +507,7 @@ function renderBreak(){
     $('#ctit').textContent=group; $('#csub').textContent=bank;
     $('#stats').innerHTML=''; $('#foot').textContent='Ngân hàng này không có dữ liệu phân rã cho nhóm đã chọn.';
     chart.clear();
-    chart.setOption({graphic:{type:'text',left:'center',top:'middle',style:{text:`${bank} không có dữ liệu cho nhóm này`,fill:'#6B7280',font:'14px IBM Plex Sans'}}});
+    chart.setOption({graphic:{type:'text',left:'center',top:'middle',style:{text:`${bank} không có dữ liệu cho nhóm này`,fill:'#8C8276',font:'14px IBM Plex Sans'}}});
     return;
   }
   // matrix comp x period
@@ -498,23 +526,23 @@ function renderBreak(){
   chart.setOption({
     textStyle:{fontFamily:'IBM Plex Sans'},
     color:PALETTE,
-    tooltip:{ trigger:'axis', backgroundColor:'#16181D', borderColor:'#16181D',
+    tooltip:{ trigger:'axis', backgroundColor:'#211C16', borderColor:'#211C16',
       textStyle:{color:'#fff',fontFamily:'IBM Plex Mono',fontSize:12},
       formatter:params=>{
         let s=`<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
         const tot=params.reduce((a,p)=>a+(p.value||0),0);
         [...params].reverse().forEach(p=>{ if(!p.value)return;
           s+=`<div style="display:flex;justify-content:space-between;gap:14px"><span>${p.marker}${p.seriesName}</span><b>${share?p.value.toFixed(1)+'%':fmtBn(p.value)}</b></div>`; });
-        if(!share) s+=`<div style="border-top:1px solid #444;margin-top:4px;padding-top:3px;display:flex;justify-content:space-between"><span>Tổng</span><b>${fmtBn(tot)}</b></div>`;
+        if(!share) s+=`<div style="border-top:1px solid #4A4237;margin-top:4px;padding-top:3px;display:flex;justify-content:space-between"><span>Tổng</span><b>${fmtBn(tot)}</b></div>`;
         return s;
       } },
     legend:{ type:'scroll', data:comps.map(m=>m.label), bottom:0, icon:'roundRect', textStyle:{fontFamily:'IBM Plex Mono',fontSize:11} },
     grid:{ left:60, right:24, top:22, bottom:54 },
     xAxis:{ type:'category', data:ps, axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11,rotate:ps.length>8?38:0},
-      axisTick:{show:false}, axisLine:{lineStyle:{color:'#C9CDD6'}} },
+      axisTick:{show:false}, axisLine:{lineStyle:{color:'#D8CFBE'}} },
     yAxis:{ type:'value', name: share?'% tỷ trọng':'tỷ đồng', max: share?100:null,
-      nameTextStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#6B7280'},
-      splitLine:{lineStyle:{color:'#EEF0F3'}}, axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11,formatter:v=>share?v+'%':fmtAxisBn(v)} },
+      nameTextStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#8C8276'},
+      splitLine:{lineStyle:{color:'#EFE9DD'}}, axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11,formatter:v=>share?v+'%':fmtAxisBn(v)} },
     series
   }, true);
 
