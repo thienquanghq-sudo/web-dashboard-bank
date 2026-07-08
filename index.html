@@ -101,6 +101,21 @@
   .st .v{font-family:var(--mono);font-size:19px;font-weight:600;margin-top:6px;color:var(--ink);}
   .st .d{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px;}
 
+  /* overview grid */
+  .ovmeta{font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.02em;margin:2px 2px 12px;}
+  .ovgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:14px;}
+  .ovcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:15px 15px 8px;box-shadow:0 1px 2px rgba(33,28,22,.03);position:relative;}
+  .ovcard::before{content:"";position:absolute;top:0;left:0;width:34px;height:2px;background:var(--gold);border-radius:0 0 2px 0;}
+  .ovhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .ovtit{font-family:var(--serif);font-size:16.5px;font-weight:600;margin:0;letter-spacing:.005em;line-height:1.2;}
+  .ovsub{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px;letter-spacing:.02em;}
+  .ovbtns{display:flex;gap:5px;flex:0 0 auto;}
+  .ovbtns button{border:1px solid var(--line-strong);background:#fff;color:var(--muted);border-radius:6px;font-size:12px;line-height:1;padding:5px 7px;font-family:var(--mono);transition:.12s;}
+  .ovbtns button:hover{border-color:var(--gold);color:var(--gold-deep);}
+  .ovchart{width:100%;height:236px;margin-top:6px;}
+  .ovfoot{font-size:11.5px;color:var(--muted);margin-top:14px;font-family:var(--mono);letter-spacing:.02em;}
+  @media(max-width:640px){ .ovgrid{grid-template-columns:1fr;} .ovchart{height:210px;} }
+
   .hide{display:none!important;}
   .loading{padding:64px 20px;text-align:center;color:var(--muted);font-family:var(--mono);line-height:1.7;}
   @media(max-width:640px){ .wrap{padding:14px;} #chart{height:380px;} header h1{font-size:21px;} .headrow{padding:14px 16px;gap:14px;} .logo{height:60px;} .divider{display:none;} }
@@ -130,20 +145,21 @@
         <div class="ctrl">
           <span class="lbl">Chế độ</span>
           <div class="seg" id="modeSeg">
-            <button data-mode="compare" class="on">So sánh</button>
+            <button data-mode="ov" class="on">Tổng quan</button>
+            <button data-mode="compare">So sánh</button>
             <button data-mode="break">Phân rã cấu phần</button>
           </div>
         </div>
 
-        <!-- compare controls -->
-        <div class="ctrl mode-compare">
+        <!-- overview + compare: bank picker -->
+        <div class="ctrl mctl mode-ov mode-compare">
           <span class="lbl">Ngân hàng</span>
           <div class="pick" id="bankPick">
             <button class="trig">Chọn ngân hàng <span class="cnt" id="bankCnt">0</span></button>
             <div class="panel" id="bankPanel"></div>
           </div>
         </div>
-        <div class="ctrl mode-compare">
+        <div class="ctrl mctl mode-compare">
           <span class="lbl">Chỉ tiêu</span>
           <div class="pick" id="metPick">
             <button class="trig">Chọn chỉ tiêu <span class="cnt" id="metCnt">0</span></button>
@@ -152,15 +168,15 @@
         </div>
 
         <!-- breakdown controls -->
-        <div class="ctrl mode-break hide">
+        <div class="ctrl mctl mode-break hide">
           <span class="lbl">Ngân hàng</span>
           <select id="bkBank" class="rng"></select>
         </div>
-        <div class="ctrl mode-break hide">
+        <div class="ctrl mctl mode-break hide">
           <span class="lbl">Nhóm phân rã</span>
           <select id="bkGroup" class="rng" style="min-width:280px"></select>
         </div>
-        <div class="ctrl mode-break hide">
+        <div class="ctrl mctl mode-break hide">
           <span class="lbl">Hiển thị</span>
           <div class="seg sm" id="bkView">
             <button data-v="abs" class="on">Giá trị</button>
@@ -168,7 +184,7 @@
           </div>
         </div>
 
-        <div class="ctrl">
+        <div class="ctrl mctl mode-compare mode-break">
           <span class="lbl">Loại biểu đồ</span>
           <div class="seg sm" id="typeSeg">
             <button data-t="group" class="on">Cột nhóm</button>
@@ -179,7 +195,7 @@
           </div>
         </div>
 
-        <div class="ctrl mode-compare">
+        <div class="ctrl mctl mode-compare">
           <span class="lbl">Trục hoành</span>
           <div class="seg sm" id="xSeg">
             <button data-x="time" class="on">Thời gian</button>
@@ -202,7 +218,7 @@
           </div>
         </div>
 
-        <div class="ctrl mode-compare" id="atWrap">
+        <div class="ctrl mctl mode-compare" id="atWrap">
           <span class="lbl">Kỳ hiển thị</span>
           <div class="rng"><select id="atSel"></select></div>
         </div>
@@ -211,8 +227,15 @@
       <div class="chips" id="chips"></div>
     </div>
 
+    <!-- OVERVIEW GRID -->
+    <div id="ovWrap" class="hide">
+      <div class="ovmeta" id="ovMeta"></div>
+      <div class="ovgrid" id="ovGrid"></div>
+      <div class="ovfoot">Đường bị ngắt quãng = kỳ không có số liệu trong nguồn. Nguồn: FiinPro.</div>
+    </div>
+
     <!-- CHART -->
-    <div class="card">
+    <div class="card" id="mainCard">
       <h2 class="ctit" id="ctit">—</h2>
       <div class="csub" id="csub"></div>
       <div id="chart"></div>
@@ -231,7 +254,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 let DB, M_BY_ID={}, BANK_COLOR={}, chart;
 
 const state={
-  mode:'compare',
+  mode:'ov',
   banks:[], metrics:[],
   type:'group', xaxis:'time', gran:'y',
   from:0, to:0, at:0,
@@ -323,10 +346,11 @@ function removeChip(kind,val){
   syncChips(); render();
 }
 function syncChips(){
-  if(state.mode!=='compare'){ $('#chips').innerHTML=''; return; }
+  if(state.mode==='break'){ $('#chips').innerHTML=''; return; }
   let h='';
   state.banks.forEach(b=>{ h+=`<span class="chip"><span class="dot" style="background:${BANK_COLOR[b]}"></span>${b}<button class="x" onclick="removeChip('b','${b}')">×</button></span>`; });
-  state.metrics.forEach(mid=>{ const m=M_BY_ID[mid]; h+=`<span class="chip">${m.label}<button class="x" onclick="removeChip('m','${mid.replace(/'/g,"\\'")}')">×</button></span>`; });
+  if(state.mode==='compare')
+    state.metrics.forEach(mid=>{ const m=M_BY_ID[mid]; h+=`<span class="chip">${m.label}<button class="x" onclick="removeChip('m','${mid.replace(/'/g,"\\'")}')">×</button></span>`; });
   $('#chips').innerHTML=h;
 }
 
@@ -359,8 +383,115 @@ function groupComponents(group){
   return all.filter(m=>m.level===minLvl);
 }
 
+/* ---------- overview (preset charts) ---------- */
+const OV_CHARTS=[
+  {id:'RATIO|5. Khả năng sinh lợi / NIM', t:'NIM', sub:'Biên lãi ròng', u:'pct'},
+  {id:'RATIO|4. Tài sản & Thanh khoản / Nợ xấu (3-5)/Tổng dư nợ', t:'Tỷ lệ nợ xấu (NPL)', sub:'Nợ nhóm 3–5 / Tổng dư nợ', u:'pct'},
+  {id:'RATIO|2. Chất lượng tài sản / Dự phòng cho vay/ Nợ xấu', t:'Bao phủ nợ xấu (LLR)', sub:'Dự phòng cho vay / Nợ xấu', u:'pct'},
+  {id:'BS|Cho vay khách hàng / Cho vay khách hàng', t:'Dư nợ cho vay khách hàng', sub:'Cho vay gộp, trước dự phòng', u:'bn'},
+  {id:'RATIO|6. Tăng trưởng / Tăng trưởng tín dụng (%YoY)', t:'Tăng trưởng tín dụng', sub:'%YoY', u:'pct'},
+  {id:'BS|Tổng nợ phải trả / Tiền gửi của khách hàng', t:'Tiền gửi của khách hàng', sub:'Số dư cuối kỳ', u:'bn'},
+  {id:'RATIO|2. Chất lượng tài sản / Tỷ lệ CASA', t:'Tỷ lệ CASA', sub:'Tiền gửi không kỳ hạn / Tổng tiền gửi', u:'pct'},
+  {id:'RATIO|5. Khả năng sinh lợi / Tỷ lệ lợi nhuận sau thuế và trước các khoản bất thường so với trung bình VCSH', t:'ROE', sub:'LNST / VCSH bình quân', u:'pct'},
+  {id:'RATIO|5. Khả năng sinh lợi / Tỷ lệ lợi nhuận sau thuế và trước các khoản bất thường so với trung bình tổng tài sản', t:'ROA', sub:'LNST / Tổng tài sản bình quân', u:'pct'},
+  {id:'RATIO|3. Hiệu quả hoạt động / Tỷ lệ CIR', t:'CIR', sub:'Chi phí hoạt động / Tổng thu nhập hoạt động', u:'pct'},
+  {id:'IS|Tổng lợi nhuận trước thuế', t:'Lợi nhuận trước thuế', sub:'Lũy kế kỳ báo cáo', u:'bn'},
+  {id:'BS|TỔNG TÀI SẢN', t:'Tổng tài sản', sub:'Số dư cuối kỳ', u:'bn'},
+  {id:'RATIO|4. Tài sản & Thanh khoản / Dư nợ cho vay/ Tiền gửi (LDR)', t:'LDR', sub:'Dư nợ cho vay / Tiền gửi', u:'pct'},
+  {id:'RATIO|1. An toàn vốn / Tỷ lệ CAR', t:'CAR', sub:'An toàn vốn · chỉ có số liệu năm', u:'pct'},
+];
+let OV_LIST=[], OV_INST=[];
+
+// giá trị thô: kỳ không có số liệu trả về null (đứt nét) thay vì 0,
+// vì với các tỷ lệ (NIM, NPL…) số 0 sẽ gây hiểu nhầm
+function rawVal(bank, mid, period){
+  const g=getVal(bank,mid); if(!g) return null;
+  const v=g[period]; return v==null?null:Math.round(v*100)/100;
+}
+
+function buildOverview(){
+  OV_LIST=OV_CHARTS.filter(c=>M_BY_ID[c.id]);
+  const ud={bn:'tỷ đồng',pct:'%'};
+  $('#ovGrid').innerHTML=OV_LIST.map((c,i)=>`
+    <div class="ovcard">
+      <div class="ovhead">
+        <div><h3 class="ovtit">${c.t}</h3><div class="ovsub">${c.sub} · ${ud[c.u]}</div></div>
+        <div class="ovbtns">
+          <button title="Mở trong chế độ So sánh" onclick="openInCompare(${i})">⤢</button>
+          <button title="Xuất ảnh PNG" onclick="exportOv(${i})">↓</button>
+        </div>
+      </div>
+      <div class="ovchart" id="ov${i}"></div>
+    </div>`).join('');
+  OV_INST=OV_LIST.map(()=>null);
+}
+
+function renderOverview(){
+  const banks=state.banks, ps=rangeList();
+  $('#ovMeta').textContent = banks.length
+    ? `${banks.length} ngân hàng · ${state.gran==='y'?'theo năm':'theo quý'} · ${ps[0]}–${ps[ps.length-1]}`
+    : 'Chọn ít nhất 1 ngân hàng để xem các chỉ số tổng quan.';
+  OV_LIST.forEach((c,i)=>{
+    const el=$('#ov'+i); if(!el) return;
+    if(!OV_INST[i]) OV_INST[i]=echarts.init(el);
+    const inst=OV_INST[i];
+    const series=banks.map(b=>({
+      name:b, type:'line',
+      data:ps.map(p=>rawVal(b,c.id,p)),
+      itemStyle:{color:BANK_COLOR[b]}, lineStyle:{color:BANK_COLOR[b],width:1.8},
+      symbol:'circle', symbolSize:3.5, connectNulls:false, emphasis:{focus:'series'}
+    }));
+    const empty=!banks.length || series.every(s=>s.data.every(v=>v==null));
+    inst.clear();
+    if(empty){
+      inst.setOption({graphic:{type:'text',left:'center',top:'middle',
+        style:{text:banks.length?`Không có số liệu ${state.gran==='y'?'năm':'quý'} cho chỉ số này`:'Chưa chọn ngân hàng',
+        fill:'#8C8276',font:'12px IBM Plex Sans'}}});
+      return;
+    }
+    inst.setOption({
+      textStyle:{fontFamily:'IBM Plex Sans'},
+      tooltip:{trigger:'axis',backgroundColor:'#211C16',borderColor:'#211C16',
+        textStyle:{color:'#fff',fontFamily:'IBM Plex Mono',fontSize:11},
+        formatter:params=>{
+          let s=`<div style="font-weight:600;margin-bottom:3px">${params[0].axisValue}</div>`;
+          [...params].filter(p=>p.value!=null).sort((a,b)=>b.value-a.value).forEach(p=>{
+            s+=`<div style="display:flex;justify-content:space-between;gap:12px"><span>${p.marker}${p.seriesName}</span><b>${fmtVal(c.u,p.value)}</b></div>`;
+          });
+          return s;
+        }},
+      grid:{left:c.u==='bn'?52:44, right:12, top:12, bottom:26},
+      xAxis:{type:'category',data:ps,
+        axisLabel:{fontFamily:'IBM Plex Mono',fontSize:10,rotate:ps.length>9?38:0,interval:ps.length>20?'auto':0},
+        axisTick:{show:false}, axisLine:{lineStyle:{color:'#D8CFBE'}}},
+      yAxis:{type:'value',scale:c.u==='pct',
+        splitLine:{lineStyle:{color:'#EFE9DD'}},
+        axisLabel:{fontFamily:'IBM Plex Mono',fontSize:10,formatter:v=>c.u==='pct'?v+'%':fmtAxisBn(v)}},
+      series
+    },true);
+  });
+}
+
+function exportOv(i){
+  if(!OV_INST[i]) return;
+  const url=OV_INST[i].getDataURL({pixelRatio:2,backgroundColor:'#fff'});
+  const a=document.createElement('a'); a.href=url;
+  a.download='vp-'+OV_LIST[i].t.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.png'; a.click();
+}
+function openInCompare(i){
+  const c=OV_LIST[i];
+  state.metrics=[c.id];
+  $$('#metPanel input').forEach(cb=>cb.checked=(cb.value===c.id));
+  $('#metCnt').textContent=1;
+  setMode('compare');
+}
+
 /* ---------- main render ---------- */
-function render(){ state.mode==='compare'?renderCompare():renderBreak(); }
+function render(){
+  if(state.mode==='ov') renderOverview();
+  else if(state.mode==='compare') renderCompare();
+  else renderBreak();
+}
 
 function seriesColor(i){ return PALETTE[i%PALETTE.length]; }
 
@@ -548,14 +679,18 @@ function renderBreak(){
 function setMode(m){
   state.mode=m;
   $$('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
-  $$('.mode-compare').forEach(e=>e.classList.toggle('hide', m!=='compare'));
-  $$('.mode-break').forEach(e=>e.classList.toggle('hide', m!=='break'));
-  $('#xSeg').closest('.ctrl').classList.toggle('hide', m!=='compare');
+  $$('.mctl').forEach(e=>e.classList.toggle('hide', !e.classList.contains('mode-'+m)));
+  $('#ovWrap').classList.toggle('hide', m!=='ov');
+  $('#mainCard').classList.toggle('hide', m==='ov');
+  $('#stats').classList.toggle('hide', m==='ov');
+  $('#exportBtn').classList.toggle('hide', m==='ov');
   if(m==='break'){ // limit chart types
     $$('#typeSeg button').forEach(b=>b.classList.toggle('hide',!['stack','area','line'].includes(b.dataset.t)));
     if(!['stack','area','line'].includes(state.type)) setType('stack');
   } else $$('#typeSeg button').forEach(b=>b.classList.remove('hide'));
   syncChips(); render();
+  if(m==='ov') OV_INST.forEach(c=>c&&c.resize());
+  else if(chart) chart.resize();
 }
 function setType(t){ state.type=t; $$('#typeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t)); render(); }
 
@@ -565,10 +700,10 @@ function init(){
   $('#cover').innerHTML=`${DB.meta.banks.length} ngân hàng · ${DB.metrics.length} chỉ tiêu · năm ${DB.periods.years[0]}–${DB.periods.years.at(-1)} · quý ${DB.periods.quarters[0]}–${DB.periods.quarters.at(-1)}`;
   $('#boot').classList.add('hide'); $('#app').classList.remove('hide');
   chart=echarts.init($('#chart'));
-  buildBankPanel(); buildMetricPanel(); buildBreakdownControls(); fillRange();
+  buildBankPanel(); buildMetricPanel(); buildBreakdownControls(); buildOverview(); fillRange();
 
   // default selection for a useful first view
-  ['VCB','BID','CTG','TCB','ACB'].forEach(b=>{ if(DB.meta.banks.includes(b)){ state.banks.push(b); const cb=$(`#bankPanel input[value="${b}"]`); if(cb)cb.checked=true; } });
+  ['VCB','BID','CTG','TCB','MBB','VPB','ACB'].forEach(b=>{ if(DB.meta.banks.includes(b)){ state.banks.push(b); const cb=$(`#bankPanel input[value="${b}"]`); if(cb)cb.checked=true; } });
   const ta=DB.metrics.find(m=>m.id==='BS|TỔNG TÀI SẢN'); if(ta){ state.metrics.push(ta.id); const cb=$(`#metPanel input[value="${CSS.escape(ta.id)}"]`); if(cb)cb.checked=true; }
   $('#bankCnt').textContent=state.banks.length; $('#metCnt').textContent=state.metrics.length;
   syncChips();
@@ -592,8 +727,8 @@ function init(){
   $('#bkGroup').onchange=e=>{ state.bkGroup=e.target.value; render(); };
 
   $('#exportBtn').onclick=()=>{ const url=chart.getDataURL({pixelRatio:2,backgroundColor:'#fff'}); const a=document.createElement('a'); a.href=url; a.download='bank-chart.png'; a.click(); };
-  window.addEventListener('resize',()=>chart.resize());
-  render();
+  window.addEventListener('resize',()=>{ chart.resize(); OV_INST.forEach(c=>c&&c.resize()); });
+  setMode('ov');
 }
 
 fetch('bank_data.json').then(r=>{ if(!r.ok)throw new Error(r.status); return r.json(); })
