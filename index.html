@@ -148,6 +148,7 @@
             <button data-mode="ov" class="on">Tổng quan</button>
             <button data-mode="compare">So sánh</button>
             <button data-mode="break">Phân rã cấu phần</button>
+            <button data-mode="val">Định giá</button>
           </div>
         </div>
 
@@ -184,6 +185,45 @@
           </div>
         </div>
 
+        <!-- valuation controls -->
+        <div class="ctrl mctl mode-val hide">
+          <span class="lbl">Xem theo</span>
+          <div class="seg sm" id="valView">
+            <button data-vv="bank" class="on">Từng ngân hàng</button>
+            <button data-vv="ind">Toàn ngành</button>
+          </div>
+        </div>
+        <div class="ctrl mctl mode-val hide" id="valBankWrap">
+          <span class="lbl">Ngân hàng</span>
+          <select id="valBank" class="rng"></select>
+        </div>
+        <div class="ctrl mctl mode-val hide">
+          <span class="lbl">Chỉ số định giá</span>
+          <div class="seg sm" id="valMetric">
+            <button data-vm="PB" class="on">P/B</button>
+            <button data-vm="PE_basic">P/E cơ bản</button>
+            <button data-vm="PE_diluted">P/E pha loãng</button>
+          </div>
+        </div>
+        <div class="ctrl mctl mode-val hide" id="valBandsWrap">
+          <span class="lbl">Dải thống kê</span>
+          <div class="seg sm" id="valBands">
+            <button data-vb="1" class="on">Hiện</button>
+            <button data-vb="0">Ẩn</button>
+          </div>
+        </div>
+        <div class="ctrl mctl mode-val hide" id="valIndWrap">
+          <span class="lbl">Đường bình quân ngành</span>
+          <div class="seg sm" id="valInd">
+            <button data-vi="mean" class="on">Mean</button>
+            <button data-vi="median">Median</button>
+          </div>
+        </div>
+        <div class="ctrl mctl mode-val hide" id="valHiWrap">
+          <span class="lbl">Làm nổi bật</span>
+          <select id="valHi" class="rng"></select>
+        </div>
+
         <div class="ctrl mctl mode-compare mode-break">
           <span class="lbl">Loại biểu đồ</span>
           <div class="seg sm" id="typeSeg">
@@ -203,7 +243,7 @@
           </div>
         </div>
 
-        <div class="ctrl">
+        <div class="ctrl" id="granWrap">
           <span class="lbl">Kỳ</span>
           <div class="seg sm" id="granSeg">
             <button data-g="y" class="on">Năm</button>
@@ -211,7 +251,7 @@
           </div>
         </div>
 
-        <div class="ctrl">
+        <div class="ctrl" id="rngWrap">
           <span class="lbl" id="rngLbl">Khoảng thời gian</span>
           <div class="rng">
             <select id="rngFrom"></select><span>→</span><select id="rngTo"></select>
@@ -258,7 +298,8 @@ const state={
   banks:[], metrics:[],
   type:'group', xaxis:'time', gran:'y',
   from:0, to:0, at:0,
-  bkBank:null, bkGroup:null, bkView:'abs'
+  bkBank:null, bkGroup:null, bkView:'abs',
+  valView:'bank', valBank:null, valMetric:'PB', valBands:true, valIndStat:'mean', valHi:''
 };
 
 /* ---------- formatting ---------- */
@@ -346,7 +387,7 @@ function removeChip(kind,val){
   syncChips(); render();
 }
 function syncChips(){
-  if(state.mode==='break'){ $('#chips').innerHTML=''; return; }
+  if(state.mode==='break'||state.mode==='val'){ $('#chips').innerHTML=''; return; }
   let h='';
   state.banks.forEach(b=>{ h+=`<span class="chip"><span class="dot" style="background:${BANK_COLOR[b]}"></span>${b}<button class="x" onclick="removeChip('b','${b}')">×</button></span>`; });
   if(state.mode==='compare')
@@ -490,6 +531,7 @@ function openInCompare(i){
 function render(){
   if(state.mode==='ov') renderOverview();
   else if(state.mode==='compare') renderCompare();
+  else if(state.mode==='val') renderVal();
   else renderBreak();
 }
 
@@ -675,6 +717,184 @@ function renderBreak(){
     <div class="v">${tot?(r.v/tot*100).toFixed(1)+'%':'–'}</div><div class="d">${fmtBn(r.v)} · ${ps[lastI]}</div></div>`).join('');
 }
 
+/* ================= VALUATION MODULE ================= */
+let VDB=null, valLoading=false;
+const VAL_BAND={ mean:'#9B7B47', median:'#9A9182', upper:'#C6A34E', lower:'#6E9BB3' };
+const VAL_LINE='#3C5A6E';
+
+function fmtX(v){ return v==null||isNaN(v)?'–':(Math.round(v*100)/100).toFixed(2)+'x'; }
+function valMetricLabel(k){ const m=(VDB?VDB.meta.metrics:[]).find(x=>x.key===k); return m?m.label:k; }
+function valUnitOf(k){ return k==='PB'?'P/B':'P/E'; }
+
+function ensureVal(cb){
+  if(VDB){ cb&&cb(); return; }
+  if(valLoading) return;
+  valLoading=true;
+  $('#ctit').textContent='Đang tải dữ liệu định giá…'; $('#csub').textContent=''; $('#foot').textContent=''; $('#stats').innerHTML='';
+  chart.clear();
+  fetch('valuation_data.json').then(r=>{ if(!r.ok)throw new Error(r.status); return r.json(); })
+    .then(d=>{ VDB=d; valLoading=false; buildValBankLists(); cb&&cb(); })
+    .catch(e=>{ valLoading=false; chart.clear();
+      chart.setOption({graphic:{type:'text',left:'center',top:'middle',
+        style:{text:'Không tải được valuation_data.json ('+e.message+') · đặt file cùng thư mục với index.html',fill:'#8C8276',font:'13px IBM Plex Sans'}}}); });
+}
+
+function buildValBankLists(){
+  if(!VDB) return;
+  const banks=VDB.meta.bank_order;
+  if(!state.valBank||!banks.includes(state.valBank)) state.valBank=banks[0];
+  $('#valBank').value=state.valBank;
+}
+
+function valSeriesData(bank,mk){
+  const e=VDB.banks[bank]; if(!e) return [];
+  const st=e.start, vals=e.metrics[mk].values, dts=VDB.dates, out=[];
+  for(let i=0;i<vals.length;i++){ if(vals[i]!=null) out.push([dts[st+i], vals[i]]); }
+  return out;
+}
+
+function valBaseOpt(series){
+  return {
+    textStyle:{fontFamily:'IBM Plex Sans'},
+    tooltip:{trigger:'axis', backgroundColor:'#211C16', borderColor:'#211C16', confine:true,
+      textStyle:{color:'#fff',fontFamily:'IBM Plex Mono',fontSize:12},
+      formatter:params=>{
+        const ps=params.filter(p=>p.value&&p.value[1]!=null);
+        if(!ps.length) return '';
+        let s=`<div style="font-weight:600;margin-bottom:4px">${ps[0].axisValueLabel}</div>`;
+        ps.sort((a,b)=>b.value[1]-a.value[1]);
+        ps.slice(0,14).forEach(p=>{ s+=`<div style="display:flex;justify-content:space-between;gap:14px"><span>${p.marker}${p.seriesName}</span><b>${fmtX(p.value[1])}</b></div>`; });
+        if(ps.length>14) s+=`<div style="color:#B89A66;margin-top:2px">… +${ps.length-14} nữa</div>`;
+        return s;
+      }},
+    grid:{left:52, right:26, top:20, bottom:78},
+    xAxis:{type:'time', axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11,color:'#8C8276'},
+      axisLine:{lineStyle:{color:'#D8CFBE'}}, axisTick:{show:false}},
+    yAxis:{type:'value', scale:true, name:'Lần',
+      nameTextStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#8C8276'},
+      splitLine:{lineStyle:{color:'#EFE9DD'}},
+      axisLabel:{fontFamily:'IBM Plex Mono',fontSize:11,formatter:v=>v.toFixed(1)}},
+    dataZoom:[{type:'inside'},{type:'slider',height:20,bottom:36,borderColor:'#D8CFBE',
+      fillerColor:'rgba(155,123,71,.12)', handleStyle:{color:'#9B7B47'}, moveHandleStyle:{color:'#9B7B47'},
+      textStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#8C8276'},
+      dataBackground:{lineStyle:{color:'#D8CFBE'},areaStyle:{color:'#EFE9DD'}},
+      selectedDataBackground:{lineStyle:{color:'#B89A66'},areaStyle:{color:'#E6D9BF'}}}],
+    legend:{type:'scroll', bottom:2, icon:'roundRect', textStyle:{fontFamily:'IBM Plex Mono',fontSize:11},
+      pageIconColor:'#9B7B47', data:series.map(s=>s.name)},
+    series
+  };
+}
+
+function renderVal(){
+  const isBank=state.valView==='bank';
+  $('#valBankWrap').classList.toggle('hide',!isBank);
+  $('#valBandsWrap').classList.toggle('hide',!isBank);
+  $('#valIndWrap').classList.toggle('hide',isBank);
+  $('#valHiWrap').classList.toggle('hide',isBank);
+  ensureVal(()=> isBank?renderValBank():renderValInd());
+}
+
+function renderValBank(){
+  const bank=state.valBank, mk=state.valMetric, e=VDB.banks[bank];
+  if(!e){ chart.clear(); return; }
+  const data=valSeriesData(bank,mk), stats=e.metrics[mk].stats;
+  const series=[{ name:bank+' · '+valUnitOf(mk), type:'line', showSymbol:false, data,
+    lineStyle:{color:VAL_LINE,width:1.6}, itemStyle:{color:VAL_LINE}, connectNulls:true, z:3 }];
+  if(state.valBands && stats){
+    const ml=(n,c,v,dash)=>({yAxis:v, lineStyle:{color:c,width:1.4,type:dash?'dashed':'solid'},
+      label:{formatter:n+' '+(Math.round(v*100)/100).toFixed(2), color:c, fontFamily:'IBM Plex Mono',
+        fontSize:10, position:'end', backgroundColor:'rgba(255,255,255,.7)', padding:[1,2]}});
+    series[0].markLine={ symbol:'none', silent:true, animation:false, precision:2, data:[
+      ml('Mean',VAL_BAND.mean,stats.mean,false),
+      ml('Median',VAL_BAND.median,stats.median,true),
+      ml('Mean +1σ',VAL_BAND.upper,stats.upper,false),
+      ml('Mean −1σ',VAL_BAND.lower,stats.lower,false) ]};
+  }
+  chart.setOption(valBaseOpt(series), true);
+  $('#ctit').textContent=`${bank} · ${valMetricLabel(mk)}`;
+  const last=data.length?data[data.length-1]:null;
+  $('#csub').textContent=`Từ ${e.listing_date} · ${data.length} phiên · đơn vị: Lần`;
+  $('#foot').innerHTML='Bốn đường ngang = Mean / Median / Mean ±1σ trên toàn bộ lịch sử niêm yết. '
+    +(mk!=='PB'?'P/E ≤ 0 hoặc > 100 (không ý nghĩa) đã được loại khỏi cả đường giá và thống kê. ':'')+'Nguồn: FiinPro.';
+  renderValBankStats(mk,last,stats);
+}
+
+function stCard(h,v,d,c){ return `<div class="st"><div class="h">${c?`<span class="dot" style="width:9px;height:9px;border-radius:3px;background:${c}"></span>`:''}${h}</div><div class="v">${v}</div><div class="d">${d||''}</div></div>`; }
+
+function renderValBankStats(mk,last,stats){
+  if(!stats){ $('#stats').innerHTML=''; return; }
+  const cur=last?last[1]:null;
+  const z=(cur!=null&&stats.std)?(cur-stats.mean)/stats.std:null;
+  let pos='—';
+  if(cur!=null){
+    if(cur>stats.upper) pos='Trên +1σ (đắt)';
+    else if(cur<stats.lower) pos='Dưới −1σ (rẻ)';
+    else if(cur>=stats.mean) pos='Trên trung bình';
+    else pos='Dưới trung bình';
+  }
+  $('#stats').innerHTML=[
+    stCard('Hiện tại', fmtX(cur), (last?last[0]:'')+(z!=null?` · z=${z.toFixed(2)}`:''), VAL_LINE),
+    stCard('Mean', fmtX(stats.mean), `n=${stats.n} phiên`, VAL_BAND.mean),
+    stCard('Median', fmtX(stats.median), 'trung vị lịch sử', VAL_BAND.median),
+    stCard('Mean +1σ', fmtX(stats.upper), `σ=${(Math.round(stats.std*100)/100).toFixed(2)}`, VAL_BAND.upper),
+    stCard('Mean −1σ', fmtX(stats.lower), '', VAL_BAND.lower),
+    stCard('Vị thế', pos, 'so với lịch sử', '#211C16')
+  ].join('');
+}
+
+function renderValInd(){
+  const mk=state.valMetric, stat=state.valIndStat, hi=state.valHi;
+  const banks=VDB.meta.bank_order;
+  const series=banks.map(b=>{
+    const isHi=hi&&b===hi;
+    return { name:b, type:'line', showSymbol:false, data:valSeriesData(b,mk),
+      lineStyle:{color:BANK_COLOR[b], width:isHi?2.6:1, opacity:hi?(isHi?1:.22):.62},
+      itemStyle:{color:BANK_COLOR[b]}, connectNulls:true, z:isHi?6:2, emphasis:{focus:'series'} };
+  });
+  const dts=VDB.dates, ind=VDB.industry[mk][stat], indData=[];
+  for(let i=0;i<dts.length;i++){ if(ind[i]!=null) indData.push([dts[i],ind[i]]); }
+  series.push({ name:'BÌNH QUÂN NGÀNH', type:'line', showSymbol:false, data:indData,
+    lineStyle:{color:'#211C16',width:3}, itemStyle:{color:'#211C16'}, connectNulls:true, z:12 });
+  chart.setOption(valBaseOpt(series), true);
+  $('#ctit').textContent=`Định giá toàn ngành · ${valMetricLabel(mk)}`;
+  $('#csub').textContent=`${banks.length} ngân hàng · đường đậm = bình quân ngành (${stat==='mean'?'trung bình':'trung vị'}) · đơn vị: Lần`;
+  $('#foot').innerHTML='Cổ phiếu nằm <b>trên</b> đường bình quân ngành = định giá cao hơn mặt bằng ngành (overvalued tương đối); nằm <b>dưới</b> = undervalued tương đối. '
+    +(mk!=='PB'?'P/E ≤ 0 hoặc > 100 đã loại. ':'')+'Nguồn: FiinPro.';
+  renderValIndStats(mk,stat,hi);
+}
+
+function renderValIndStats(mk,stat,hi){
+  const ind=VDB.industry[mk][stat];
+  let ci=ind.length-1; while(ci>=0&&ind[ci]==null) ci--;
+  const indCur=ci>=0?ind[ci]:null;
+  const rows=[];
+  VDB.meta.bank_order.forEach(b=>{
+    const vals=VDB.banks[b].metrics[mk].values;
+    let j=vals.length-1; while(j>=0&&vals[j]==null) j--;
+    if(j<0) return;
+    rows.push({b, cur:vals[j], rel: indCur!=null? vals[j]-indCur : null});
+  });
+  rows.sort((a,b)=>(b.rel==null?-1e9:b.rel)-(a.rel==null?-1e9:a.rel));
+  const rel=r=>(r.rel>=0?'▲ +':'▼ ')+(Math.round(Math.abs(r.rel)*100)/100).toFixed(2)+' vs ngành';
+  let h=stCard('Bình quân ngành', fmtX(indCur), (stat==='mean'?'trung bình':'trung vị')+' hiện tại', '#211C16');
+  if(hi){ const r=rows.find(x=>x.b===hi); if(r) h+=stCard(hi, fmtX(r.cur), r.rel!=null?rel(r):'', BANK_COLOR[hi]); }
+  rows.slice(0,3).forEach(r=> h+=stCard(r.b+' · cao nhất', fmtX(r.cur), rel(r), BANK_COLOR[r.b]));
+  rows.slice(-3).reverse().forEach(r=> h+=stCard(r.b+' · thấp nhất', fmtX(r.cur), rel(r), BANK_COLOR[r.b]));
+  $('#stats').innerHTML=h;
+}
+
+function buildValControls(){
+  const banks=DB.meta.banks;
+  $('#valBank').innerHTML=banks.map(b=>`<option>${b}</option>`).join('');
+  $('#valHi').innerHTML='<option value="">— không —</option>'+banks.map(b=>`<option>${b}</option>`).join('');
+  $$('#valView button').forEach(b=>b.onclick=()=>{ state.valView=b.dataset.vv; $$('#valView button').forEach(x=>x.classList.toggle('on',x===b)); renderVal(); });
+  $$('#valMetric button').forEach(b=>b.onclick=()=>{ state.valMetric=b.dataset.vm; $$('#valMetric button').forEach(x=>x.classList.toggle('on',x===b)); renderVal(); });
+  $$('#valBands button').forEach(b=>b.onclick=()=>{ state.valBands=b.dataset.vb==='1'; $$('#valBands button').forEach(x=>x.classList.toggle('on',x===b)); renderVal(); });
+  $$('#valInd button').forEach(b=>b.onclick=()=>{ state.valIndStat=b.dataset.vi; $$('#valInd button').forEach(x=>x.classList.toggle('on',x===b)); renderVal(); });
+  $('#valBank').onchange=e=>{ state.valBank=e.target.value; renderVal(); };
+  $('#valHi').onchange=e=>{ state.valHi=e.target.value; renderVal(); };
+}
+
 /* ---------- wiring ---------- */
 function setMode(m){
   state.mode=m;
@@ -684,6 +904,9 @@ function setMode(m){
   $('#mainCard').classList.toggle('hide', m==='ov');
   $('#stats').classList.toggle('hide', m==='ov');
   $('#exportBtn').classList.toggle('hide', m==='ov');
+  // year/quarter range controls don't apply to the daily valuation series
+  $('#granWrap').classList.toggle('hide', m==='val');
+  $('#rngWrap').classList.toggle('hide', m==='val');
   if(m==='break'){ // limit chart types
     $$('#typeSeg button').forEach(b=>b.classList.toggle('hide',!['stack','area','line'].includes(b.dataset.t)));
     if(!['stack','area','line'].includes(state.type)) setType('stack');
@@ -700,7 +923,7 @@ function init(){
   $('#cover').innerHTML=`${DB.meta.banks.length} ngân hàng · ${DB.metrics.length} chỉ tiêu · năm ${DB.periods.years[0]}–${DB.periods.years.at(-1)} · quý ${DB.periods.quarters[0]}–${DB.periods.quarters.at(-1)}`;
   $('#boot').classList.add('hide'); $('#app').classList.remove('hide');
   chart=echarts.init($('#chart'));
-  buildBankPanel(); buildMetricPanel(); buildBreakdownControls(); buildOverview(); fillRange();
+  buildBankPanel(); buildMetricPanel(); buildBreakdownControls(); buildValControls(); buildOverview(); fillRange();
 
   // default selection for a useful first view
   ['VCB','BID','CTG','TCB','MBB','VPB','ACB'].forEach(b=>{ if(DB.meta.banks.includes(b)){ state.banks.push(b); const cb=$(`#bankPanel input[value="${b}"]`); if(cb)cb.checked=true; } });
