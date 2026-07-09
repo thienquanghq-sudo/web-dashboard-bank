@@ -117,6 +117,21 @@
   @media(max-width:640px){ .ovgrid{grid-template-columns:1fr;} .ovchart{height:210px;} }
 
   .hide{display:none!important;}
+  /* ranking mode */
+  .rkgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:12px;margin-top:10px;padding-bottom:8px;}
+  .rkcol{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;}
+  .rkcol h4{margin:0;font-family:var(--mono);font-size:11px;letter-spacing:.08em;background:var(--panel2);border-bottom:1px solid var(--line);padding:8px 10px;color:var(--gold-deep);text-transform:uppercase;display:flex;justify-content:space-between;}
+  .rkcol table{width:100%;border-collapse:collapse;font-size:12px;}
+  .rkcol td{padding:4px 8px;border-top:1px solid var(--line);}
+  .rkcol tr:first-child td{border-top:0;}
+  .rk-r{font-family:var(--mono);color:var(--muted);width:24px;font-size:11px;}
+  .rk-b{width:50px;}
+  .rk-b span{display:inline-block;color:#fff;font-family:var(--mono);font-size:10.5px;border-radius:4px;padding:2px 6px;font-weight:600;letter-spacing:.02em;}
+  .rk-v{font-family:var(--mono);text-align:right;}
+  .rk-s{font-family:var(--mono);text-align:right;color:var(--muted);width:52px;font-size:11px;}
+  .rk-c{width:36px;font-family:var(--mono);font-size:10.5px;text-align:right;}
+  .rk-c.up{color:#4F6F52;} .rk-c.dn{color:#8C3B3B;} .rk-c.eq{color:var(--muted);}
+  .rktot td{background:var(--panel2);font-weight:600;font-family:var(--mono);font-size:11.5px;}
   .loading{padding:64px 20px;text-align:center;color:var(--muted);font-family:var(--mono);line-height:1.7;}
   @media(max-width:640px){ .wrap{padding:14px;} #chart{height:380px;} header h1{font-size:21px;} .headrow{padding:14px 16px;gap:14px;} .logo{height:60px;} .divider{display:none;} }
 </style>
@@ -148,6 +163,7 @@
             <button data-mode="ov" class="on">Tổng quan</button>
             <button data-mode="compare">So sánh</button>
             <button data-mode="break">Phân rã cấu phần</button>
+            <button data-mode="rank">Xếp hạng</button>
             <button data-mode="val">Định giá</button>
           </div>
         </div>
@@ -224,6 +240,30 @@
           <select id="valHi" class="rng"></select>
         </div>
 
+        <!-- ranking controls -->
+        <div class="ctrl mctl mode-rank hide">
+          <span class="lbl">Chỉ tiêu xếp hạng</span>
+          <select id="rkMetric" class="rng" style="min-width:290px"></select>
+        </div>
+        <div class="ctrl mctl mode-rank hide">
+          <span class="lbl">Số kỳ hiển thị</span>
+          <div class="seg sm" id="rkN">
+            <button data-n="3">3</button>
+            <button data-n="4">4</button>
+            <button data-n="5" class="on">5</button>
+            <button data-n="6">6</button>
+          </div>
+        </div>
+
+        <!-- compare: sort when x-axis = bank -->
+        <div class="ctrl mctl mode-compare hide" id="cmpSortWrap">
+          <span class="lbl">Sắp xếp</span>
+          <div class="seg sm" id="cmpSort">
+            <button data-s="none" class="on">Gốc</button>
+            <button data-s="desc">Giảm dần</button>
+          </div>
+        </div>
+
         <div class="ctrl mctl mode-compare mode-break">
           <span class="lbl">Loại biểu đồ</span>
           <div class="seg sm" id="typeSeg">
@@ -279,6 +319,7 @@
       <h2 class="ctit" id="ctit">—</h2>
       <div class="csub" id="csub"></div>
       <div id="chart"></div>
+      <div id="rankWrap" class="hide"></div>
       <div class="foot" id="foot"></div>
     </div>
 
@@ -299,7 +340,8 @@ const state={
   type:'group', xaxis:'time', gran:'y',
   from:0, to:0, at:0,
   bkBank:null, bkGroup:null, bkView:'abs',
-  valView:'bank', valBank:null, valMetric:'PB', valBands:true, valIndStat:'mean', valHi:''
+  valView:'bank', valBank:null, valMetric:'PB', valBands:true, valIndStat:'mean', valHi:'',
+  rkMetric:null, rkN:5, cmpSort:'none'
 };
 
 /* ---------- formatting ---------- */
@@ -532,6 +574,7 @@ function render(){
   if(state.mode==='ov') renderOverview();
   else if(state.mode==='compare') renderCompare();
   else if(state.mode==='val') renderVal();
+  else if(state.mode==='rank') renderRank();
   else renderBreak();
 }
 
@@ -570,11 +613,23 @@ function renderCompare(){
       });
     });
   } else { // xaxis bank
-    xData=banks;
     const at=periodsAll()[state.at];
+    let bankList=[...banks];
+    if(state.cmpSort==='desc'){ const m0=mets[0]; bankList.sort((a,b)=>val(b,m0.id,at)-val(a,m0.id,at)); }
+    xData=bankList;
     mets.forEach((m,i)=>{
-      series.push(makeSeries(m.label, seriesColor(i), m, banks.map(b=>round(val(b,m.id,at))), onRight(m.unit), stacked?'g':null, state.type==='combo'?m.unit:null));
+      series.push(makeSeries(m.label, seriesColor(i), m, bankList.map(b=>round(val(b,m.id,at))), onRight(m.unit), stacked?'g':null, state.type==='combo'?m.unit:null));
       sUnits.push(m.unit);
+    });
+  }
+
+  // sort control only relevant on the bank axis
+  $('#cmpSortWrap').classList.toggle('hide', state.xaxis!=='bank');
+  // value labels on top of bars/points (ranking-style), skip stacked types
+  if(state.xaxis==='bank' && state.type!=='stack' && state.type!=='area'){
+    series.forEach((s,i)=>{ const u=sUnits[i];
+      s.label={show:true, position:'top', fontFamily:'IBM Plex Mono', fontSize:10, color:'#6B5D4A',
+        formatter:p=> p.value==null?'':(u==='pct'? (Math.round(p.value*10)/10)+'%' : u==='x'? p.value.toFixed(2) : fmtAxisBn(p.value))};
     });
   }
 
@@ -717,6 +772,65 @@ function renderBreak(){
     <div class="v">${tot?(r.v/tot*100).toFixed(1)+'%':'–'}</div><div class="d">${fmtBn(r.v)} · ${ps[lastI]}</div></div>`).join('');
 }
 
+/* ================= RANKING MODULE ================= */
+function buildRankControls(){
+  let h='';
+  SEC_ORDER.forEach(sc=>{
+    const sec=DB.sections.find(s=>s.id===sc);
+    const ms=DB.metrics.filter(mm=>mm.section===sc && hasAny(mm.id));
+    if(!ms.length) return;
+    h+=`<optgroup label="${sec.name}">`+ms.map(mm=>
+      `<option value="${mm.id.replace(/"/g,'&quot;')}">${'\u00A0'.repeat(mm.level*2)}${mm.label}</option>`).join('')+'</optgroup>';
+  });
+  $('#rkMetric').innerHTML=h;
+  const def=DB.metrics.find(mm=>mm.id==='BS|TỔNG TÀI SẢN')||DB.metrics.find(mm=>hasAny(mm.id));
+  if(def){ state.rkMetric=def.id; $('#rkMetric').value=def.id; }
+  $('#rkMetric').onchange=e=>{ state.rkMetric=e.target.value; render(); };
+  $$('#rkN button').forEach(b=>b.onclick=()=>{ state.rkN=+b.dataset.n; $$('#rkN button').forEach(x=>x.classList.toggle('on',x===b)); render(); });
+  $$('#cmpSort button').forEach(b=>b.onclick=()=>{ state.cmpSort=b.dataset.s; $$('#cmpSort button').forEach(x=>x.classList.toggle('on',x===b)); render(); });
+}
+
+function renderRank(){
+  const m=M_BY_ID[state.rkMetric];
+  if(!m){ $('#rankWrap').innerHTML='<div class="loading">Chọn chỉ tiêu để xếp hạng</div>'; return; }
+  const psAll=periodsAll();
+  const ps=psAll.slice(Math.max(0, state.to-state.rkN+1), state.to+1);
+  const isBn=m.unit==='bn';
+  let prevRank=null, cols='';
+  ps.forEach(p=>{
+    const rows=DB.meta.banks.map(b=>({b, v:rawVal(b,m.id,p)})).filter(r=>r.v!=null).sort((a,b)=>b.v-a.v);
+    const rk={}; rows.forEach((r,i)=>rk[r.b]=i+1);
+    if(!rows.length){ cols+=`<div class="rkcol"><h4>${p}</h4><table><tr><td class="rk-r"></td><td style="color:var(--muted)">không có số liệu</td></tr></table></div>`; prevRank=rk; return; }
+    const tot=rows.reduce((s,r)=>s+r.v,0);
+    const vs=rows.map(r=>r.v), mn=Math.min(...vs), mx=Math.max(...vs);
+    let body='';
+    rows.forEach((r,i)=>{
+      const a=mx>mn ? (r.v-mn)/(mx-mn) : .5;
+      const bg=`rgba(155,123,71,${(0.05+a*0.42).toFixed(3)})`;
+      let ch='<td class="rk-c eq">·</td>';
+      if(prevRank){
+        if(!(r.b in prevRank)) ch='<td class="rk-c eq">mới</td>';
+        else { const d=prevRank[r.b]-(i+1);
+          ch = d>0?`<td class="rk-c up">▲${d}</td>` : d<0?`<td class="rk-c dn">▼${-d}</td>` : '<td class="rk-c eq">·</td>'; }
+      }
+      body+=`<tr><td class="rk-r">${i+1}.</td><td class="rk-b"><span style="background:${BANK_COLOR[r.b]}">${r.b}</span></td>`
+        +`<td class="rk-v" style="background:${bg}">${isBn?fmtBn(r.v):fmtVal(m.unit,r.v)}</td>`
+        +(isBn?`<td class="rk-s">${tot?(r.v/tot*100).toFixed(1)+'%':'–'}</td>`:'')
+        +ch+'</tr>';
+    });
+    if(isBn) body+=`<tr class="rktot"><td class="rk-r"></td><td class="rk-b">Tổng</td><td class="rk-v">${fmtBn(tot)}</td><td class="rk-s">100%</td><td></td></tr>`;
+    cols+=`<div class="rkcol"><h4><span>${p}</span><span>${rows.length} NH</span></h4><table>${body}</table></div>`;
+    prevRank=rk;
+  });
+  $('#rankWrap').innerHTML=`<div class="rkgrid">${cols}</div>`;
+  $('#ctit').textContent='Xếp hạng · '+m.label;
+  $('#csub').textContent=`${ps.length} kỳ ${state.gran==='y'?'năm':'quý'} gần nhất đến ${ps[ps.length-1]} · đơn vị: ${{bn:'tỷ đồng',pct:'%',x:'lần'}[m.unit]}`;
+  $('#foot').innerHTML='Nền vàng đậm dần theo độ lớn trong kỳ. ▲▼ = thay đổi thứ hạng so với kỳ liền trước.'
+    +(isBn?' Cột % = tỷ trọng trên tổng các ngân hàng có số liệu trong kỳ.':'')
+    +' Ngân hàng thiếu số liệu kỳ nào sẽ không xuất hiện trong kỳ đó. Nguồn: FiinPro.';
+  $('#stats').innerHTML='';
+}
+
 /* ================= VALUATION MODULE ================= */
 let VDB=null, valLoading=false;
 const VAL_BAND={ mean:'#9B7B47', median:'#9A9182', upper:'#C6A34E', lower:'#6E9BB3' };
@@ -733,7 +847,10 @@ function ensureVal(cb){
   $('#ctit').textContent='Đang tải dữ liệu định giá…'; $('#csub').textContent=''; $('#foot').textContent=''; $('#stats').innerHTML='';
   chart.clear();
   fetch('valuation_data.json').then(r=>{ if(!r.ok)throw new Error(r.status); return r.json(); })
-    .then(d=>{ VDB=d; valLoading=false; buildValBankLists(); cb&&cb(); })
+    .then(d=>{ VDB=d; valLoading=false; buildValBankLists();
+      const cv=$('#cover');
+      if(cv && !cv.dataset.valNote){ cv.dataset.valNote='1'; cv.textContent+=` · định giá theo ngày đến ${VDB.meta.date_end}`; }
+      cb&&cb(); })
     .catch(e=>{ valLoading=false; chart.clear();
       chart.setOption({graphic:{type:'text',left:'center',top:'middle',
         style:{text:'Không tải được valuation_data.json ('+e.message+') · đặt file cùng thư mục với index.html',fill:'#8C8276',font:'13px IBM Plex Sans'}}}); });
@@ -847,18 +964,54 @@ function renderValInd(){
   const banks=VDB.meta.bank_order;
   const series=banks.map(b=>{
     const isHi=hi&&b===hi;
-    return { name:b, type:'line', showSymbol:false, data:valSeriesData(b,mk),
-      lineStyle:{color:BANK_COLOR[b], width:isHi?2.6:1, opacity:hi?(isHi?1:.22):.62},
-      itemStyle:{color:BANK_COLOR[b]}, connectNulls:true, z:isHi?6:2, emphasis:{focus:'series'} };
+    const s={ name:b, type:'line', showSymbol:false, data:valSeriesData(b,mk),
+      connectNulls:true, z:isHi?8:2, emphasis:{focus:'series'} };
+    if(!hi){ // no highlight: soft multi-color view
+      s.lineStyle={color:BANK_COLOR[b], width:1, opacity:.62};
+      s.itemStyle={color:BANK_COLOR[b]};
+    } else if(isHi){ // highlighted bank: bold, own color, end label
+      s.lineStyle={color:BANK_COLOR[b], width:3};
+      s.itemStyle={color:BANK_COLOR[b]};
+      s.endLabel={show:true, formatter:p=>`${b}  ${fmtX(p.value[1])}`,
+        color:BANK_COLOR[b], fontFamily:'IBM Plex Mono', fontSize:11, fontWeight:600,
+        backgroundColor:'rgba(255,255,255,.75)', padding:[2,4], distance:6};
+      s.labelLayout={moveOverlap:'shiftY'};
+    } else { // context banks: one neutral tone so the highlight pops
+      s.lineStyle={color:'#C9C0B0', width:.9, opacity:.5};
+      s.itemStyle={color:'#C9C0B0'};
+    }
+    return s;
   });
   const dts=VDB.dates, ind=VDB.industry[mk][stat], indData=[];
   for(let i=0;i<dts.length;i++){ if(ind[i]!=null) indData.push([dts[i],ind[i]]); }
   series.push({ name:'BÌNH QUÂN NGÀNH', type:'line', showSymbol:false, data:indData,
-    lineStyle:{color:'#211C16',width:3}, itemStyle:{color:'#211C16'}, connectNulls:true, z:12 });
-  chart.setOption(valBaseOpt(series), true);
-  $('#ctit').textContent=`Định giá toàn ngành · ${valMetricLabel(mk)}`;
+    lineStyle:{color:'#211C16',width:3,type:hi?'dashed':'solid'}, itemStyle:{color:'#211C16'}, connectNulls:true, z:12,
+    endLabel: hi?{show:true, formatter:p=>`Ngành  ${fmtX(p.value[1])}`, color:'#211C16',
+      fontFamily:'IBM Plex Mono', fontSize:11, fontWeight:600,
+      backgroundColor:'rgba(255,255,255,.75)', padding:[2,4], distance:6}:undefined,
+    labelLayout: hi?{moveOverlap:'shiftY'}:undefined });
+  const opt=valBaseOpt(series);
+  if(hi){
+    opt.grid.right=110; opt.legend.data=[hi,'BÌNH QUÂN NGÀNH'];
+    opt.tooltip.formatter=params=>{
+      const pHi=params.find(p=>p.seriesName===hi&&p.value&&p.value[1]!=null);
+      const pInd=params.find(p=>p.seriesName==='BÌNH QUÂN NGÀNH'&&p.value&&p.value[1]!=null);
+      if(!pHi&&!pInd) return '';
+      let s=`<div style="font-weight:600;margin-bottom:4px">${(pHi||pInd).axisValueLabel}</div>`;
+      if(pHi) s+=`<div style="display:flex;justify-content:space-between;gap:14px"><span>${pHi.marker}${hi}</span><b>${fmtX(pHi.value[1])}</b></div>`;
+      if(pInd) s+=`<div style="display:flex;justify-content:space-between;gap:14px"><span>${pInd.marker}Bình quân ngành</span><b>${fmtX(pInd.value[1])}</b></div>`;
+      if(pHi&&pInd){ const d=pHi.value[1]-pInd.value[1];
+        s+=`<div style="border-top:1px solid #4A4237;margin-top:4px;padding-top:3px;display:flex;justify-content:space-between;gap:14px"><span>Chênh lệch</span><b>${(d>=0?'+':'')+(Math.round(d*100)/100).toFixed(2)} (${d>=0?'cao hơn':'thấp hơn'} ngành)</b></div>`; }
+      return s;
+    };
+  }
+  chart.setOption(opt, true);
+  $('#ctit').textContent = hi
+    ? `${hi} so với toàn ngành · ${valMetricLabel(mk)}`
+    : `Định giá toàn ngành · ${valMetricLabel(mk)}`;
   $('#csub').textContent=`${banks.length} ngân hàng · đường đậm = bình quân ngành (${stat==='mean'?'trung bình':'trung vị'}) · đơn vị: Lần`;
-  $('#foot').innerHTML='Cổ phiếu nằm <b>trên</b> đường bình quân ngành = định giá cao hơn mặt bằng ngành (overvalued tương đối); nằm <b>dưới</b> = undervalued tương đối. '
+  $('#foot').innerHTML=(hi?`<b>${hi}</b> được tô đậm; các ngân hàng khác chuyển màu xám làm nền so sánh. `:'')
+    +'Cổ phiếu nằm <b>trên</b> đường bình quân ngành = định giá cao hơn mặt bằng ngành (overvalued tương đối); nằm <b>dưới</b> = undervalued tương đối. '
     +(mk!=='PB'?'P/E ≤ 0 hoặc > 100 đã loại. ':'')+'Nguồn: FiinPro.';
   renderValIndStats(mk,stat,hi);
 }
@@ -903,7 +1056,10 @@ function setMode(m){
   $('#ovWrap').classList.toggle('hide', m!=='ov');
   $('#mainCard').classList.toggle('hide', m==='ov');
   $('#stats').classList.toggle('hide', m==='ov');
-  $('#exportBtn').classList.toggle('hide', m==='ov');
+  $('#exportBtn').classList.toggle('hide', m==='ov'||m==='rank');
+  // rank mode swaps the chart for an HTML table
+  $('#chart').classList.toggle('hide', m==='rank');
+  $('#rankWrap').classList.toggle('hide', m!=='rank');
   // year/quarter range controls don't apply to the daily valuation series
   $('#granWrap').classList.toggle('hide', m==='val');
   $('#rngWrap').classList.toggle('hide', m==='val');
@@ -923,7 +1079,7 @@ function init(){
   $('#cover').innerHTML=`${DB.meta.banks.length} ngân hàng · ${DB.metrics.length} chỉ tiêu · năm ${DB.periods.years[0]}–${DB.periods.years.at(-1)} · quý ${DB.periods.quarters[0]}–${DB.periods.quarters.at(-1)}`;
   $('#boot').classList.add('hide'); $('#app').classList.remove('hide');
   chart=echarts.init($('#chart'));
-  buildBankPanel(); buildMetricPanel(); buildBreakdownControls(); buildValControls(); buildOverview(); fillRange();
+  buildBankPanel(); buildMetricPanel(); buildBreakdownControls(); buildValControls(); buildRankControls(); buildOverview(); fillRange();
 
   // default selection for a useful first view
   ['VCB','BID','CTG','TCB','MBB','VPB','ACB'].forEach(b=>{ if(DB.meta.banks.includes(b)){ state.banks.push(b); const cb=$(`#bankPanel input[value="${b}"]`); if(cb)cb.checked=true; } });
