@@ -117,6 +117,16 @@
   @media(max-width:640px){ .ovgrid{grid-template-columns:1fr;} .ovchart{height:210px;} }
 
   .hide{display:none!important;}
+  /* seasonality mode */
+  .seasonsec{font-family:var(--serif);font-size:15px;font-weight:600;margin:20px 0 8px;color:var(--ink);}
+  .seasonsec:first-child{margin-top:0;}
+  .seasonwrap-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);}
+  .seasontable{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px;}
+  .seasontable th,.seasontable td{padding:6px 7px;text-align:center;border:1px solid var(--line);white-space:nowrap;}
+  .seasontable th{background:var(--panel2);font-weight:600;font-size:10px;letter-spacing:.03em;color:var(--muted);text-transform:uppercase;}
+  .seasontable td.syr{font-family:var(--sans);font-weight:600;text-align:left;background:var(--panel2);color:var(--ink);}
+  .seasontable td.savg{font-weight:600;background:var(--panel2)!important;}
+  .seasontable tr.sB td,.seasontable tr.sC td{font-weight:600;}
   /* ranking mode */
   .rkgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:12px;margin-top:10px;padding-bottom:8px;}
   .rkcol{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;}
@@ -165,6 +175,7 @@
             <button data-mode="break">Phân rã cấu phần</button>
             <button data-mode="rank">Xếp hạng</button>
             <button data-mode="val">Định giá</button>
+            <button data-mode="season">Mùa vụ</button>
           </div>
         </div>
 
@@ -255,6 +266,25 @@
           </div>
         </div>
 
+        <!-- seasonality controls -->
+        <div class="ctrl mctl mode-season hide">
+          <span class="lbl">Xem theo</span>
+          <div class="seg sm" id="seasonView">
+            <button data-sv="bank" class="on">Từng ngân hàng</button>
+            <button data-sv="ind">Toàn ngành</button>
+          </div>
+        </div>
+        <div class="ctrl mctl mode-season hide" id="seasonBankWrap">
+          <span class="lbl">Ngân hàng</span>
+          <select id="seasonBank" class="rng"></select>
+        </div>
+        <div class="ctrl mctl mode-season hide">
+          <span class="lbl">Khoảng năm (Phần B &amp; C)</span>
+          <div class="rng">
+            <select id="seasonFrom"></select><span>→</span><select id="seasonTo"></select>
+          </div>
+        </div>
+
         <!-- compare: sort when x-axis = bank -->
         <div class="ctrl mctl mode-compare hide" id="cmpSortWrap">
           <span class="lbl">Sắp xếp</span>
@@ -320,6 +350,7 @@
       <div class="csub" id="csub"></div>
       <div id="chart"></div>
       <div id="rankWrap" class="hide"></div>
+      <div id="seasonWrap" class="hide"></div>
       <div class="foot" id="foot"></div>
     </div>
 
@@ -341,7 +372,8 @@ const state={
   from:0, to:0, at:0,
   bkBank:null, bkGroup:null, bkView:'abs',
   valView:'bank', valBank:null, valMetric:'PB', valBands:true, valIndStat:'mean', valHi:'',
-  rkMetric:null, rkN:5, cmpSort:'none'
+  rkMetric:null, rkN:5, cmpSort:'none',
+  seasonView:'bank', seasonBank:null, seasonFrom:null, seasonTo:null
 };
 
 /* ---------- formatting ---------- */
@@ -575,6 +607,7 @@ function render(){
   else if(state.mode==='compare') renderCompare();
   else if(state.mode==='val') renderVal();
   else if(state.mode==='rank') renderRank();
+  else if(state.mode==='season') ensureSeason(renderSeason);
   else renderBreak();
 }
 
@@ -831,6 +864,116 @@ function renderRank(){
   $('#stats').innerHTML='';
 }
 
+/* ================= SEASONALITY MODULE ================= */
+let SDB=null, seasonLoading=false;
+const MONTH_LBL=['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
+
+function ensureSeason(cb){
+  if(SDB){ cb&&cb(); return; }
+  if(seasonLoading) return;
+  seasonLoading=true;
+  $('#ctit').textContent='Đang tải dữ liệu mùa vụ…'; $('#csub').textContent=''; $('#foot').textContent=''; $('#stats').innerHTML=''; $('#seasonWrap').innerHTML='';
+  fetch('seasonality_data.json').then(r=>{ if(!r.ok)throw new Error(r.status); return r.json(); })
+    .then(d=>{ SDB=d; seasonLoading=false; buildSeasonBankList(); cb&&cb(); })
+    .catch(e=>{ seasonLoading=false;
+      $('#seasonWrap').innerHTML=`<div class="loading">Không tải được seasonality_data.json (${e.message}) · đặt file cùng thư mục với index.html</div>`; });
+}
+function buildSeasonBankList(){
+  if(!SDB) return;
+  const banks=SDB.meta.bank_order;
+  if(!state.seasonBank||!banks.includes(state.seasonBank)) state.seasonBank=banks[0];
+  $('#seasonBank').innerHTML=banks.map(b=>`<option${b===state.seasonBank?' selected':''}>${b}</option>`).join('');
+}
+function buildSeasonControls(){
+  $$('#seasonView button').forEach(b=>b.onclick=()=>{
+    state.seasonView=b.dataset.sv;
+    $$('#seasonView button').forEach(x=>x.classList.toggle('on',x===b));
+    $('#seasonBankWrap').classList.toggle('hide', state.seasonView!=='bank');
+    state.seasonFrom=null; state.seasonTo=null;
+    ensureSeason(renderSeason);
+  });
+  $('#seasonBank').onchange=e=>{ state.seasonBank=e.target.value; state.seasonFrom=null; state.seasonTo=null; renderSeason(); };
+  $('#seasonFrom').onchange=e=>{ state.seasonFrom=+e.target.value; if(state.seasonFrom>state.seasonTo){state.seasonTo=state.seasonFrom;} renderSeason(); };
+  $('#seasonTo').onchange=e=>{ state.seasonTo=+e.target.value; if(state.seasonTo<state.seasonFrom){state.seasonFrom=state.seasonTo;} renderSeason(); };
+}
+function seasonSeries(){
+  if(!SDB) return null;
+  return state.seasonView==='ind' ? SDB.industry.monthly_returns : (SDB.banks[state.seasonBank]||{}).monthly_returns;
+}
+function seasonColor(v,center,scale){
+  if(v==null||isNaN(v)) return '';
+  const d=v-center, a=Math.max(0,Math.min(1,Math.abs(d)/(scale||1)));
+  const alpha=(0.08+a*0.55).toFixed(3);
+  return d>=0 ? `background:rgba(79,111,82,${alpha})` : `background:rgba(140,59,59,${alpha})`;
+}
+function seasonPct(v,digits){ return v==null||isNaN(v) ? '–' : v.toFixed(digits)+'%'; }
+
+function renderSeason(){
+  const series=seasonSeries();
+  if(!series || !Object.keys(series).length){ $('#seasonWrap').innerHTML='<div class="loading">Không có dữ liệu</div>'; return; }
+  const years=Object.keys(series).map(Number).sort((a,b)=>a-b);
+
+  if(state.seasonFrom==null||!years.includes(state.seasonFrom)) state.seasonFrom=years[0];
+  if(state.seasonTo==null||!years.includes(state.seasonTo)) state.seasonTo=years[years.length-1];
+  const yrOptHtml=years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  $('#seasonFrom').innerHTML=yrOptHtml; $('#seasonFrom').value=state.seasonFrom;
+  $('#seasonTo').innerHTML=yrOptHtml; $('#seasonTo').value=state.seasonTo;
+
+  // ---- Phần A: TSSL theo tháng, từng năm ----
+  let allVals=[];
+  years.forEach(y=>{ (series[y]||[]).forEach(v=>{ if(v!=null) allVals.push(v); }); });
+  const scaleA = allVals.length ? Math.max(...allVals.map(Math.abs)) : 10;
+
+  let a='<table class="seasontable"><thead><tr><th>Năm</th>'+MONTH_LBL.map(m=>`<th>${m}</th>`).join('')+'<th>TB năm</th></tr></thead><tbody>';
+  years.forEach(y=>{
+    const row=series[y]||Array(12).fill(null);
+    const valid=row.filter(v=>v!=null);
+    const avg = valid.length? valid.reduce((s,v)=>s+v,0)/valid.length : null;
+    a+=`<tr><td class="syr">${y}</td>`
+      +row.map(v=>`<td style="${seasonColor(v,0,scaleA)}">${seasonPct(v,2)}</td>`).join('')
+      +`<td class="savg" style="${seasonColor(avg,0,scaleA)}">${seasonPct(avg,2)}</td></tr>`;
+  });
+  a+='</tbody></table>';
+
+  // ---- selected range for Phần B / C ----
+  const rngYears=years.filter(y=>y>=state.seasonFrom&&y<=state.seasonTo);
+  const monthVals=mi=>rngYears.map(y=>(series[y]||[])[mi]).filter(v=>v!=null);
+
+  // ---- Phần B: xác suất TSSL dương theo tháng ----
+  let b='<table class="seasontable"><thead><tr><th>Giai đoạn</th>'+MONTH_LBL.map(m=>`<th>${m}</th>`).join('')+'</tr></thead><tbody><tr class="sB">';
+  b+=`<td class="syr">${state.seasonFrom}–${state.seasonTo}</td>`;
+  for(let mi=0; mi<12; mi++){
+    const vals=monthVals(mi);
+    const p = vals.length? vals.filter(v=>v>0).length/vals.length*100 : null;
+    b+=`<td style="${seasonColor(p,50,50)}">${p==null?'–':Math.round(p)+'%'}</td>`;
+  }
+  b+='</tr></tbody></table>';
+
+  // ---- Phần C: TSSL trung bình theo tháng ----
+  const monthAvgs=[];
+  for(let mi=0; mi<12; mi++){
+    const vals=monthVals(mi);
+    monthAvgs.push(vals.length? vals.reduce((s,v)=>s+v,0)/vals.length : null);
+  }
+  const scaleC = Math.max(1, ...monthAvgs.filter(v=>v!=null).map(Math.abs));
+  let c='<table class="seasontable"><thead><tr><th>Giai đoạn</th>'+MONTH_LBL.map(m=>`<th>${m}</th>`).join('')+'</tr></thead><tbody><tr class="sC">';
+  c+=`<td class="syr">${state.seasonFrom}–${state.seasonTo}</td>`;
+  monthAvgs.forEach(avg=>{ c+=`<td style="${seasonColor(avg,0,scaleC)}">${seasonPct(avg,2)}</td>`; });
+  c+='</tr></tbody></table>';
+
+  const label = state.seasonView==='ind' ? 'Toàn ngành (26 ngân hàng)' : state.seasonBank;
+  $('#seasonWrap').innerHTML =
+    `<div class="seasonsec">Phần A · TSSL theo tháng, từng năm</div><div class="seasonwrap-scroll">${a}</div>`
+    +`<div class="seasonsec">Phần B · Xác suất TSSL dương theo tháng</div><div class="seasonwrap-scroll">${b}</div>`
+    +`<div class="seasonsec">Phần C · TSSL trung bình theo tháng</div><div class="seasonwrap-scroll">${c}</div>`;
+
+  $('#ctit').textContent='Mùa vụ · '+label;
+  $('#csub').textContent=`${years[0]}–${years[years.length-1]} · Phần B/C tính theo giai đoạn ${state.seasonFrom}–${state.seasonTo}`;
+  $('#foot').innerHTML='TSSL tháng = giá đóng cửa điều chỉnh cuối tháng / cuối tháng trước − 1. Xanh = dương, đỏ = âm, đậm nhạt theo độ lớn.'
+    +' Tháng niêm yết đầu tiên của mã và tháng đang diễn ra (chưa đủ dữ liệu cả tháng) hiển thị "–". Nguồn: FiinPro.';
+  $('#stats').innerHTML='';
+}
+
 /* ================= VALUATION MODULE ================= */
 let VDB=null, valLoading=false;
 const VAL_BAND={ mean:'#9B7B47', median:'#9A9182', upper:'#C6A34E', lower:'#6E9BB3' };
@@ -1056,13 +1199,14 @@ function setMode(m){
   $('#ovWrap').classList.toggle('hide', m!=='ov');
   $('#mainCard').classList.toggle('hide', m==='ov');
   $('#stats').classList.toggle('hide', m==='ov');
-  $('#exportBtn').classList.toggle('hide', m==='ov'||m==='rank');
-  // rank mode swaps the chart for an HTML table
-  $('#chart').classList.toggle('hide', m==='rank');
+  $('#exportBtn').classList.toggle('hide', m==='ov'||m==='rank'||m==='season');
+  // rank & season modes swap the chart for an HTML table
+  $('#chart').classList.toggle('hide', m==='rank'||m==='season');
   $('#rankWrap').classList.toggle('hide', m!=='rank');
-  // year/quarter range controls don't apply to the daily valuation series
-  $('#granWrap').classList.toggle('hide', m==='val');
-  $('#rngWrap').classList.toggle('hide', m==='val');
+  $('#seasonWrap').classList.toggle('hide', m!=='season');
+  // year/quarter range controls don't apply to the daily valuation series or the monthly seasonality series
+  $('#granWrap').classList.toggle('hide', m==='val'||m==='season');
+  $('#rngWrap').classList.toggle('hide', m==='val'||m==='season');
   if(m==='break'){ // limit chart types
     $$('#typeSeg button').forEach(b=>b.classList.toggle('hide',!['stack','area','line'].includes(b.dataset.t)));
     if(!['stack','area','line'].includes(state.type)) setType('stack');
@@ -1079,7 +1223,7 @@ function init(){
   $('#cover').innerHTML=`${DB.meta.banks.length} ngân hàng · ${DB.metrics.length} chỉ tiêu · năm ${DB.periods.years[0]}–${DB.periods.years.at(-1)} · quý ${DB.periods.quarters[0]}–${DB.periods.quarters.at(-1)}`;
   $('#boot').classList.add('hide'); $('#app').classList.remove('hide');
   chart=echarts.init($('#chart'));
-  buildBankPanel(); buildMetricPanel(); buildBreakdownControls(); buildValControls(); buildRankControls(); buildOverview(); fillRange();
+  buildBankPanel(); buildMetricPanel(); buildBreakdownControls(); buildValControls(); buildRankControls(); buildSeasonControls(); buildOverview(); fillRange();
 
   // default selection for a useful first view
   ['VCB','BID','CTG','TCB','MBB','VPB','ACB'].forEach(b=>{ if(DB.meta.banks.includes(b)){ state.banks.push(b); const cb=$(`#bankPanel input[value="${b}"]`); if(cb)cb.checked=true; } });
