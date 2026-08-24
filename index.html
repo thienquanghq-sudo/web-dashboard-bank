@@ -341,7 +341,7 @@
     <div id="ovWrap" class="hide">
       <div class="ovmeta" id="ovMeta"></div>
       <div class="ovgrid" id="ovGrid"></div>
-      <div class="ovfoot">Đường bị ngắt quãng = kỳ không có số liệu trong nguồn. Nguồn: FiinPro.</div>
+      <div class="ovfoot">Đường bị ngắt quãng = kỳ không có số liệu trong nguồn. Đường nét đứt đen = trung bình ngành (toàn bộ 26 ngân hàng). Nguồn: FiinPro.</div>
     </div>
 
     <!-- CHART -->
@@ -505,6 +505,9 @@ const OV_CHARTS=[
   {id:'RATIO|2. Chất lượng tài sản / Dự phòng cho vay/ Nợ xấu', t:'Bao phủ nợ xấu (LLR)', sub:'Dự phòng cho vay / Nợ xấu', u:'pct'},
   {id:'BS|Cho vay khách hàng / Cho vay khách hàng', t:'Dư nợ cho vay khách hàng', sub:'Cho vay gộp, trước dự phòng', u:'bn'},
   {id:'RATIO|6. Tăng trưởng / Tăng trưởng tín dụng (%YoY)', t:'Tăng trưởng tín dụng', sub:'%YoY', u:'pct'},
+  {id:'RATIO|7. Tăng trưởng YTD / Tăng trưởng tín dụng (%YTD)', t:'Tăng trưởng tín dụng (YTD)', sub:'Quý: so đầu năm · Năm: tăng trưởng cả năm', u:'pct'},
+  {id:'RATIO|7. Tăng trưởng YTD / Tăng trưởng tiền gửi khách hàng (%YTD)', t:'Tăng trưởng tiền gửi (YTD)', sub:'Quý: so đầu năm · Năm: tăng trưởng cả năm', u:'pct'},
+  {id:'RATIO|7. Tăng trưởng YTD / Tăng trưởng nợ xấu (%YTD)', t:'Tăng trưởng nợ xấu (YTD)', sub:'Dư nợ nhóm 3–5 · Quý: so đầu năm · Năm: cả năm', u:'pct'},
   {id:'BS|Tổng nợ phải trả / Tiền gửi của khách hàng', t:'Tiền gửi của khách hàng', sub:'Số dư cuối kỳ', u:'bn'},
   {id:'RATIO|2. Chất lượng tài sản / Tỷ lệ CASA', t:'Tỷ lệ CASA', sub:'Tiền gửi không kỳ hạn / Tổng tiền gửi', u:'pct'},
   {id:'RATIO|5. Khả năng sinh lợi / Tỷ lệ lợi nhuận sau thuế và trước các khoản bất thường so với trung bình VCSH', t:'ROE', sub:'LNST / VCSH bình quân', u:'pct'},
@@ -522,6 +525,12 @@ let OV_LIST=[], OV_INST=[];
 function rawVal(bank, mid, period){
   const g=getVal(bank,mid); if(!g) return null;
   const v=g[period]; return v==null?null:Math.round(v*100)/100;
+}
+// trung bình ngành cho 1 chỉ tiêu tại 1 kỳ, tính trên toàn bộ 26 ngân hàng (không phụ thuộc lựa chọn hiện tại)
+function industryAvg(mid, period){
+  let sum=0, n=0;
+  DB.meta.banks.forEach(b=>{ const v=rawVal(b,mid,period); if(v!=null){ sum+=v; n++; } });
+  return n ? sum/n : null;
 }
 
 function buildOverview(){
@@ -556,6 +565,14 @@ function renderOverview(){
       itemStyle:{color:BANK_COLOR[b]}, lineStyle:{color:BANK_COLOR[b],width:1.8},
       symbol:'circle', symbolSize:3.5, connectNulls:false, emphasis:{focus:'series'}
     }));
+    if(banks.length){
+      series.push({
+        name:'Trung bình ngành', type:'line',
+        data:ps.map(p=>{ const v=industryAvg(c.id,p); return v==null?null:Math.round(v*100)/100; }),
+        itemStyle:{color:'#211C16'}, lineStyle:{color:'#211C16',width:2.2,type:'dashed'},
+        symbol:'diamond', symbolSize:5, connectNulls:false, emphasis:{focus:'series'}, z:5
+      });
+    }
     const empty=!banks.length || series.every(s=>s.data.every(v=>v==null));
     inst.clear();
     if(empty){
@@ -645,13 +662,34 @@ function renderCompare(){
         sUnits.push(m.unit); ci++;
       });
     });
+    // trung bình ngành: 1 đường tham chiếu riêng cho mỗi chỉ tiêu, luôn hiển thị dạng line nét đứt
+    mets.forEach(m=>{
+      const name = mets.length>1 ? `Trung bình ngành · ${m.label}` : 'Trung bình ngành';
+      const avgData = ps.map(p=>{ const v=industryAvg(m.id,p); return v==null?null:Math.round(v*100)/100; });
+      const s=makeSeries(name,'#211C16',m,avgData,onRight(m.unit),null,state.type==='combo'?m.unit:null);
+      s.type='line'; delete s.stack; delete s.areaStyle;
+      s.lineStyle={color:'#211C16',width:2.4,type:'dashed'};
+      s.itemStyle={color:'#211C16'}; s.symbol='diamond'; s.symbolSize=5; s.connectNulls=false; s.z=10;
+      series.push(s); sUnits.push(m.unit);
+    });
   } else { // xaxis bank
     const at=periodsAll()[state.at];
     let bankList=[...banks];
     if(state.cmpSort==='desc'){ const m0=mets[0]; bankList.sort((a,b)=>val(b,m0.id,at)-val(a,m0.id,at)); }
     xData=bankList;
     mets.forEach((m,i)=>{
-      series.push(makeSeries(m.label, seriesColor(i), m, bankList.map(b=>round(val(b,m.id,at))), onRight(m.unit), stacked?'g':null, state.type==='combo'?m.unit:null));
+      const s=makeSeries(m.label, seriesColor(i), m, bankList.map(b=>round(val(b,m.id,at))), onRight(m.unit), stacked?'g':null, state.type==='combo'?m.unit:null);
+      const avg=industryAvg(m.id,at);
+      if(avg!=null){
+        s.markLine={
+          symbol:'none', animation:false,
+          lineStyle:{color:'#211C16', type:'dashed', width:2},
+          label:{formatter:()=>`TB ngành ${fmtVal(m.unit,avg)}`, position:'insideEndTop',
+            fontFamily:'IBM Plex Mono', fontSize:10, color:'#211C16', backgroundColor:'#F4F0E9', padding:[2,4]},
+          data:[{ yAxis: Math.round(avg*100)/100 }]
+        };
+      }
+      series.push(s);
       sUnits.push(m.unit);
     });
   }
@@ -675,6 +713,7 @@ function renderCompare(){
   $('#csub').textContent = `${tlabel} · trục hoành: ${state.xaxis==='time'?'thời gian':'ngân hàng'} · ${rangeTxt}`;
   $('#foot').innerHTML = `Đơn vị: ${[...units].map(u=>({bn:'tỷ đồng',pct:'%',x:'lần'}[u])).join(', ')}. `+
     (dual?'Trục trái = giá trị tuyệt đối, trục phải = %. ':'')+
+    'Nét đứt đen = trung bình ngành (toàn bộ 26 ngân hàng). '+
     'Ô trống trong nguồn được tính bằng 0. Nguồn: FiinPro.';
   renderStatsCompare(banks, mets);
 }
